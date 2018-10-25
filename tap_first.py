@@ -11,10 +11,10 @@ schema = {
       'type': 'integer',
     },
     'description': {
-      'type': 'string',
+      'type': ['string', 'null'],
     },
     'ip_address': {
-      'type': 'string',
+      'type': ['string', 'null'],
     },
     'active': {
       'type': 'boolean',
