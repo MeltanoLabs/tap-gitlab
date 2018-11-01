@@ -38,7 +38,6 @@ REQUIRED_CONFIG_KEYS = [
   'api_key',
 ]
 
-
 def main():
     args = utils.parse_args(REQUIRED_CONFIG_KEYS)
     api_key = args.config.get('api_key')
@@ -51,4 +50,4 @@ def main():
 
     singer.write_schema('runners', schema, 'id')
     singer.write_records('runners', resp)
-
+    singer.write_state({'runners': 3})
