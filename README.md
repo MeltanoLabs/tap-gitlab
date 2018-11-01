@@ -5,7 +5,8 @@
 ```bash
 git clone git@gitlab.com:meltano/tap-first.git
 cd tap-first
-python -m venv venv
+python -m venv .venv
+source .venv/bin/activate
 pip install -e .
 ```
 
@@ -16,7 +17,7 @@ pip install -e .
 ## Run
 
 ```bash
-cd first_tap
+cd tap-first
 . ./venv/bin/activate
 tap-first --config config.json
 ```
