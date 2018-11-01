@@ -4,6 +4,7 @@
 
 ```bash
 git clone git@gitlab.com:meltano/tap-first.git
+cd tap-first
 python -m venv venv
 pip install -e .
 ```
