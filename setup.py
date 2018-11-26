@@ -1,15 +1,15 @@
 from setuptools import setup
 
 setup(
-  name='tap-first',
+  name='tap-gitlab',
   version='1.0',
-  py_modules=['tap_first'],
+  py_modules=['tap_gitlab'],
   install_requires=[
     'requests',
     'singer-python',
   ],
   entry_points='''
     [console_scripts]
-    tap-first=tap_first:main
+    tap-gitlab=tap_gitlab:main
   '''
 )

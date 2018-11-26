@@ -1,10 +1,10 @@
-# My First Tap
+# GitLab Tap
 
 ## Install
 
 ```bash
-git clone git@gitlab.com:meltano/tap-first.git
-cd tap-first
+git clone git@gitlab.com:meltano/tap-gitlab.git
+cd tap-gitlab
 python -m venv .venv
 source .venv/bin/activate
 pip install -e .
@@ -17,9 +17,9 @@ pip install -e .
 ## Run
 
 ```bash
-cd tap-first
+cd tap-gitlab
 . ./venv/bin/activate
-tap-first --config config.json
+tap-gitlab --config config.json
 ```
 
 Feel free to pipe to a target.
