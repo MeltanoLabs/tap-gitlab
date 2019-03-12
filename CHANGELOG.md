@@ -1,7 +1,8 @@
 # Changelog
 
 ## 0.6.0
-  * Add support for Group and Project Members
+  * Add support for fetching Merge Requests
+  * Add support for fetching Group and Project Members
   * Update Users with Member info 
   * Fetch additional {'default', 'can_push'} attributes for Branches
   * Fetch additional {'authored_date', 'committed_date', 'parent_ids'} attributes for Commits

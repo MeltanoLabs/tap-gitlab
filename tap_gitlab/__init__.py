@@ -28,7 +28,7 @@ def load_schema(entity):
 
 RESOURCES = {
     'projects': {
-        'url': '/projects/{}',
+        'url': '/projects/{}?statistics=1',
         'schema': load_schema('projects'),
         'key_properties': ['id'],
     },
@@ -43,8 +43,13 @@ RESOURCES = {
         'key_properties': ['id'],
     },
     'issues': {
-        'url': '/projects/{}/issues',
+        'url': '/projects/{}/issues?scope=all',
         'schema': load_schema('issues'),
+        'key_properties': ['id'],
+    },
+    'merge_requests': {
+        'url': '/projects/{}/merge_requests?scope=all',
+        'schema': load_schema('merge_requests'),
         'key_properties': ['id'],
     },
     'project_milestones': {
@@ -186,6 +191,21 @@ def sync_issues(project):
                 singer.write_record("issues", transformed_row, time_extracted=utils.now())
 
 
+def sync_merge_requests(project):
+    url = get_url("merge_requests", project['id'])
+    with Transformer(pre_hook=format_timestamp) as transformer:
+        for row in gen_request(url):
+            flatten_id(row, "author")
+            flatten_id(row, "assignee")
+            flatten_id(row, "milestone")
+            flatten_id(row, "merged_by")
+            flatten_id(row, "closed_by")
+            transformed_row = transformer.transform(row, RESOURCES["merge_requests"]["schema"])
+
+            if row["updated_at"] >= get_start("project_{}".format(project["id"])):
+                singer.write_record("merge_requests", transformed_row, time_extracted=utils.now())
+
+
 def sync_milestones(entity, element="project"):
     url = get_url(element + "_milestones", entity['id'])
 
@@ -272,6 +292,7 @@ def sync_project(pid):
         sync_members(project)
         sync_users(project)
         sync_issues(project)
+        sync_merge_requests(project)
         sync_commits(project)
         sync_branches(project)
         sync_milestones(project)
