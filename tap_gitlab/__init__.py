@@ -67,6 +67,16 @@ RESOURCES = {
         'schema': load_schema('groups'),
         'key_properties': ['id'],
     },
+    'project_members': {
+        'url': '/projects/{}/members',
+        'schema': load_schema('project_members'),
+        'key_properties': ['project_id', 'id'],
+    },
+    'group_members': {
+        'url': '/groups/{}/members',
+        'schema': load_schema('group_members'),
+        'key_properties': ['group_id', 'id'],
+    },
 }
 
 
@@ -196,6 +206,22 @@ def sync_users(project):
             singer.write_record("users", transformed_row, time_extracted=utils.now())
 
 
+def sync_members(entity, element="project"):
+    url = get_url(element + "_members", entity['id'])
+
+    with Transformer(pre_hook=format_timestamp) as transformer:
+        for row in gen_request(url):
+            # First, write a record for the user
+            user_row = transformer.transform(row, RESOURCES["users"]["schema"])
+            singer.write_record("users", user_row, time_extracted=utils.now())
+
+            # And then a record for the member
+            row[element + '_id'] = entity['id']
+            row['user_id'] = row['id']
+            member_row = transformer.transform(row, RESOURCES[element + "_members"]["schema"])
+            singer.write_record(element + "_members", member_row, time_extracted=utils.now())
+
+
 def sync_group(gid, pids):
     url = CONFIG['api_url'] + RESOURCES["groups"]['url'].format(gid)
 
@@ -215,6 +241,8 @@ def sync_group(gid, pids):
         sync_project(pid)
 
     sync_milestones(group, "group")
+
+    sync_members(group, "group")
 
     singer.write_record("groups", group, time_extracted=time_extracted)
 
@@ -241,11 +269,12 @@ def sync_project(pid):
 
     if project['last_activity_at'] >= get_start(state_key):
 
-        sync_branches(project)
-        sync_commits(project)
-        sync_issues(project)
-        sync_milestones(project)
+        sync_members(project)
         sync_users(project)
+        sync_issues(project)
+        sync_commits(project)
+        sync_branches(project)
+        sync_milestones(project)
 
         singer.write_record("projects", project, time_extracted=time_extracted)
         utils.update_state(STATE, state_key, last_activity_at)
