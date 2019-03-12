@@ -13,10 +13,16 @@
         "protected": {
             "type": ["null", "boolean"]
         },
+        "default": {
+            "type": ["null", "boolean"]
+        },
         "developers_can_push": {
             "type": ["null", "boolean"]
         },
         "developers_can_merge": {
+            "type": ["null", "boolean"]
+        },
+        "can_push": {
             "type": ["null", "boolean"]
         },
         "commit_id": {
