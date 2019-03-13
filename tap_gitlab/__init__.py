@@ -92,6 +92,16 @@ RESOURCES = {
         'schema': load_schema('tags'),
         'key_properties': ['project_id', 'commit_id', 'name'],
     },
+    'project_labels': {
+        'url': '/projects/{}/labels',
+        'schema': load_schema('project_labels'),
+        'key_properties': ['project_id', 'id'],
+    },
+    'group_labels': {
+        'url': '/groups/{}/labels',
+        'schema': load_schema('group_labels'),
+        'key_properties': ['group_id', 'id'],
+    },
 }
 
 
@@ -275,6 +285,16 @@ def sync_members(entity, element="project"):
             singer.write_record(element + "_members", member_row, time_extracted=utils.now())
 
 
+def sync_labels(entity, element="project"):
+    url = get_url(element + "_labels", entity['id'])
+
+    with Transformer(pre_hook=format_timestamp) as transformer:
+        for row in gen_request(url):
+            row[element + '_id'] = entity['id']
+            transformed_row = transformer.transform(row, RESOURCES[element + "_labels"]["schema"])
+            singer.write_record(element + "_labels", transformed_row, time_extracted=utils.now())
+
+
 def sync_group(gid, pids):
     url = CONFIG['api_url'] + RESOURCES["groups"]['url'].format(gid)
 
@@ -296,6 +316,8 @@ def sync_group(gid, pids):
     sync_milestones(group, "group")
 
     sync_members(group, "group")
+
+    sync_labels(group, "group")
 
     singer.write_record("groups", group, time_extracted=time_extracted)
 
@@ -329,6 +351,7 @@ def sync_project(pid):
         sync_commits(project)
         sync_branches(project)
         sync_milestones(project)
+        sync_labels(project)
         sync_releases(project)
         sync_tags(project)
 

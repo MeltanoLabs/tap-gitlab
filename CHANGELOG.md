@@ -1,6 +1,7 @@
 # Changelog
 
 ## 0.6.0
+  * Add support for fetching Group and Project Labels
   * Add support for fetching Tags and Releases
   * Add support for fetching Merge Requests
   * Add support for fetching Group and Project Members

@@ -1,0 +1,35 @@
+{
+    "type": "object",
+    "properties": {
+        "id": {
+            "type": "integer"
+        },
+        "group_id": {
+            "type": "integer"
+        },
+        "name": {
+            "type": ["null", "string"]
+        },
+        "color": {
+            "type": ["null", "string"]
+        },
+        "text_color": {
+            "type": ["null", "string"]
+        },
+        "description": {
+            "type": ["null", "string"]
+        },
+        "open_issues_count": {
+            "type": ["null", "integer"]
+        },
+        "closed_issues_count": {
+            "type": ["null", "integer"]
+        },
+        "open_merge_requests_count": {
+            "type": ["null", "integer"]
+        },
+        "subscribed": {
+            "type": ["null", "boolean"]
+        }
+    }
+}
