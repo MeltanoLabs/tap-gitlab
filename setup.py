@@ -3,9 +3,9 @@
 from setuptools import setup
 
 setup(name='tap-gitlab',
-      version='0.5.1',
+      version='0.6.0',
       description='Singer.io tap for extracting data from the GitLab API',
-      author='Stitch',
+      author='Meltano Team && Stitch',
       url='https://singer.io',
       classifiers=['Programming Language :: Python :: 3 :: Only'],
       py_modules=['tap_gitlab'],

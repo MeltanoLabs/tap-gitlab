@@ -19,11 +19,19 @@
         "author_email": {
             "type": ["null", "string"]
         },
+        "authored_date": {
+            "type": "string",
+            "format": "date-time"
+        },
         "committer_name": {
             "type": ["null", "string"]
         },
         "committer_email": {
             "type": ["null", "string"]
+        },
+        "committed_date": {
+            "type": "string",
+            "format": "date-time"
         },
         "created_at": {
             "type": "string",
@@ -34,6 +42,19 @@
         },
         "allow_failure": {
             "type": ["null", "boolean"]
+        },
+        "parent_ids": {
+            "anyOf": [
+                {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                {
+                    "type": "null"
+                }
+            ]
         }
     }
 }

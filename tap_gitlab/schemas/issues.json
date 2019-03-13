@@ -59,11 +59,23 @@
         "subscribed": {
             "type": ["null", "boolean"]
         },
+        "upvotes": {
+            "type": ["null", "integer"]
+        },
+        "downvotes": {
+            "type": ["null", "integer"]
+        },
+        "merge_requests_count": {
+            "type": ["null", "integer"]
+        },
         "user_notes_count": {
             "type": ["null", "integer"]
         },
         "due_date": {
             "type": ["null", "string"]
+        },
+        "weight": {
+            "type": ["null", "integer"]
         },
         "web_url": {
             "type": ["null", "string"]

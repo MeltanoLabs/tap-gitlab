@@ -28,7 +28,7 @@ def load_schema(entity):
 
 RESOURCES = {
     'projects': {
-        'url': '/projects/{}',
+        'url': '/projects/{}?statistics=1',
         'schema': load_schema('projects'),
         'key_properties': ['id'],
     },
@@ -43,8 +43,13 @@ RESOURCES = {
         'key_properties': ['id'],
     },
     'issues': {
-        'url': '/projects/{}/issues',
+        'url': '/projects/{}/issues?scope=all',
         'schema': load_schema('issues'),
+        'key_properties': ['id'],
+    },
+    'merge_requests': {
+        'url': '/projects/{}/merge_requests?scope=all',
+        'schema': load_schema('merge_requests'),
         'key_properties': ['id'],
     },
     'project_milestones': {
@@ -66,6 +71,36 @@ RESOURCES = {
         'url': '/groups/{}',
         'schema': load_schema('groups'),
         'key_properties': ['id'],
+    },
+    'project_members': {
+        'url': '/projects/{}/members',
+        'schema': load_schema('project_members'),
+        'key_properties': ['project_id', 'id'],
+    },
+    'group_members': {
+        'url': '/groups/{}/members',
+        'schema': load_schema('group_members'),
+        'key_properties': ['group_id', 'id'],
+    },
+    'releases': {
+        'url': '/projects/{}/releases',
+        'schema': load_schema('releases'),
+        'key_properties': ['project_id', 'commit_id', 'tag_name'],
+    },
+    'tags': {
+        'url': '/projects/{}/repository/tags',
+        'schema': load_schema('tags'),
+        'key_properties': ['project_id', 'commit_id', 'name'],
+    },
+    'project_labels': {
+        'url': '/projects/{}/labels',
+        'schema': load_schema('project_labels'),
+        'key_properties': ['project_id', 'id'],
+    },
+    'group_labels': {
+        'url': '/groups/{}/labels',
+        'schema': load_schema('group_labels'),
+        'key_properties': ['group_id', 'id'],
     },
 }
 
@@ -176,6 +211,44 @@ def sync_issues(project):
                 singer.write_record("issues", transformed_row, time_extracted=utils.now())
 
 
+def sync_merge_requests(project):
+    url = get_url("merge_requests", project['id'])
+    with Transformer(pre_hook=format_timestamp) as transformer:
+        for row in gen_request(url):
+            flatten_id(row, "author")
+            flatten_id(row, "assignee")
+            flatten_id(row, "milestone")
+            flatten_id(row, "merged_by")
+            flatten_id(row, "closed_by")
+            transformed_row = transformer.transform(row, RESOURCES["merge_requests"]["schema"])
+
+            if row["updated_at"] >= get_start("project_{}".format(project["id"])):
+                singer.write_record("merge_requests", transformed_row, time_extracted=utils.now())
+
+
+def sync_releases(project):
+    url = get_url("releases", project['id'])
+    with Transformer(pre_hook=format_timestamp) as transformer:
+        for row in gen_request(url):
+            flatten_id(row, "author")
+            flatten_id(row, "commit")
+            row['project_id'] = project["id"]
+            transformed_row = transformer.transform(row, RESOURCES["releases"]["schema"])
+
+            singer.write_record("releases", transformed_row, time_extracted=utils.now())
+
+
+def sync_tags(project):
+    url = get_url("tags", project['id'])
+    with Transformer(pre_hook=format_timestamp) as transformer:
+        for row in gen_request(url):
+            flatten_id(row, "commit")
+            row['project_id'] = project["id"]
+            transformed_row = transformer.transform(row, RESOURCES["tags"]["schema"])
+
+            singer.write_record("tags", transformed_row, time_extracted=utils.now())
+
+
 def sync_milestones(entity, element="project"):
     url = get_url(element + "_milestones", entity['id'])
 
@@ -194,6 +267,32 @@ def sync_users(project):
             transformed_row = transformer.transform(row, RESOURCES["users"]["schema"])
             project["users"].append(row["id"])
             singer.write_record("users", transformed_row, time_extracted=utils.now())
+
+
+def sync_members(entity, element="project"):
+    url = get_url(element + "_members", entity['id'])
+
+    with Transformer(pre_hook=format_timestamp) as transformer:
+        for row in gen_request(url):
+            # First, write a record for the user
+            user_row = transformer.transform(row, RESOURCES["users"]["schema"])
+            singer.write_record("users", user_row, time_extracted=utils.now())
+
+            # And then a record for the member
+            row[element + '_id'] = entity['id']
+            row['user_id'] = row['id']
+            member_row = transformer.transform(row, RESOURCES[element + "_members"]["schema"])
+            singer.write_record(element + "_members", member_row, time_extracted=utils.now())
+
+
+def sync_labels(entity, element="project"):
+    url = get_url(element + "_labels", entity['id'])
+
+    with Transformer(pre_hook=format_timestamp) as transformer:
+        for row in gen_request(url):
+            row[element + '_id'] = entity['id']
+            transformed_row = transformer.transform(row, RESOURCES[element + "_labels"]["schema"])
+            singer.write_record(element + "_labels", transformed_row, time_extracted=utils.now())
 
 
 def sync_group(gid, pids):
@@ -215,6 +314,10 @@ def sync_group(gid, pids):
         sync_project(pid)
 
     sync_milestones(group, "group")
+
+    sync_members(group, "group")
+
+    sync_labels(group, "group")
 
     singer.write_record("groups", group, time_extracted=time_extracted)
 
@@ -241,11 +344,16 @@ def sync_project(pid):
 
     if project['last_activity_at'] >= get_start(state_key):
 
-        sync_branches(project)
-        sync_commits(project)
-        sync_issues(project)
-        sync_milestones(project)
+        sync_members(project)
         sync_users(project)
+        sync_issues(project)
+        sync_merge_requests(project)
+        sync_commits(project)
+        sync_branches(project)
+        sync_milestones(project)
+        sync_labels(project)
+        sync_releases(project)
+        sync_tags(project)
 
         singer.write_record("projects", project, time_extracted=time_extracted)
         utils.update_state(STATE, state_key, last_activity_at)

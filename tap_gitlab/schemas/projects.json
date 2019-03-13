@@ -65,6 +65,9 @@
         "merge_requests_enabled": {
             "type": ["null", "boolean"]
         },
+        "merge_method": {
+            "type": ["null", "string"]
+        },
         "name": {
             "type": ["null", "string"]
         },
@@ -85,6 +88,12 @@
                 },
                 "path": {
                     "type": ["null", "string"]
+                },
+                "full_path": {
+                    "type": ["null", "string"]
+                },
+                "parent_id": {
+                    "type": ["null", "integer"]
                 }
             }
         },
@@ -192,6 +201,26 @@
         "star_count": {
             "type": ["null", "integer"]
         },
+        "statistics": {
+            "type": "object",
+            "properties": {
+                "commit_count": {
+                    "type": ["null", "integer"]
+                },
+                "storage_size": {
+                    "type": ["null", "integer"]
+                },
+                "repository_size": {
+                    "type": ["null", "integer"]
+                },
+                "lfs_objects_size": {
+                    "type": ["null", "integer"]
+                },
+                "job_artifacts_size": {
+                    "type": ["null", "integer"]
+                }
+            }
+        },
         "tag_list": {
             "anyOf": [
                 {
@@ -207,6 +236,9 @@
         },
         "visibility_level": {
             "type": ["null", "integer"]
+        },
+        "visibility": {
+            "type": ["null", "string"]
         },
         "web_url": {
             "type": ["null", "string"]
