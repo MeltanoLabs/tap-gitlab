@@ -10,9 +10,15 @@ This tap:
   - [Issues](https://docs.gitlab.com/ee/api/issues.html)
   - [Projects](https://docs.gitlab.com/ee/api/projects.html)
   - [Project milestones](https://docs.gitlab.com/ee/api/milestones.html)
+  - [Project Merge Requests](https://docs.gitlab.com/ee/api/merge_requests.html)
   - [Users](https://docs.gitlab.com/ee/api/users.html)
   - [Groups](https://docs.gitlab.com/ee/api/group_milestones.html)
   - [Group Milestones](https://docs.gitlab.com/ee/api/users.html)
+  - [Group and Project members](https://docs.gitlab.com/ee/api/members.html)
+  - [Tags](https://docs.gitlab.com/ee/api/tags.html)
+  - [Releases](https://docs.gitlab.com/ee/api/releases/index.html)
+  - [Group Labels](https://docs.gitlab.com/ee/api/group_labels.html)
+  - [Project Labels](https://docs.gitlab.com/ee/api/labels.html)
 - Outputs the schema for each resource
 - Incrementally pulls data based on the input state
 
@@ -43,14 +49,16 @@ This tap:
     - either groups or projects need to be provided
     - filling in 'groups' but leaving 'projects' empty will sync all group projects.
     - filling in 'projects' but leaving 'groups' empty will sync selected projects.
-    - filling in 'groups' and 'groups' will sync selected projects of those groups.
+    - filling in 'groups' and 'projects' will sync selected projects of those groups.
 
     ```json
-    {"api_url": "https://gitlab.com/api/v3",
-     "private_token": "your-access-token",
-    "groups": "myorg mygroup", 
-    "projects": "myorg/repo-a myorg/repo-b",
-     "start_date": "2018-01-01T00:00:00Z"}
+    {
+      "api_url": "https://gitlab.com/api/v4",
+      "private_token": "your-access-token",
+      "groups": "myorg mygroup", 
+      "projects": "myorg/repo-a myorg/repo-b",
+      "start_date": "2018-01-01T00:00:00Z"
+    }
     ```
 
 4. [Optional] Create the initial state file
@@ -60,13 +68,15 @@ This tap:
     If you omit the file it will fetch all GitLab data
 
     ```json
-    {"branches": "2017-01-17T00:00:00Z",
-    "commits": "2017-01-17T00:00:00Z",
-    "issues": "2017-01-17T00:00:00Z",
-    "projects": "2017-01-17T00:00:00Z",
-    "project_milestones": "2017-01-17T00:00:00Z", 
-    "users": "2017-01-17T00:00:00Z",
-    "group_milestones": "2017-01-17T00:00:00Z"}
+    {
+      "branches": "2017-01-17T00:00:00Z",
+      "commits": "2017-01-17T00:00:00Z",
+      "issues": "2017-01-17T00:00:00Z",
+      "projects": "2017-01-17T00:00:00Z",
+      "project_milestones": "2017-01-17T00:00:00Z", 
+      "users": "2017-01-17T00:00:00Z",
+      "group_milestones": "2017-01-17T00:00:00Z"
+    }
     ```
     
     Note:
