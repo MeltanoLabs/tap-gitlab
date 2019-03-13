@@ -82,6 +82,16 @@ RESOURCES = {
         'schema': load_schema('group_members'),
         'key_properties': ['group_id', 'id'],
     },
+    'releases': {
+        'url': '/projects/{}/releases',
+        'schema': load_schema('releases'),
+        'key_properties': ['project_id', 'commit_id', 'tag_name'],
+    },
+    'tags': {
+        'url': '/projects/{}/repository/tags',
+        'schema': load_schema('tags'),
+        'key_properties': ['project_id', 'commit_id', 'name'],
+    },
 }
 
 
@@ -206,6 +216,29 @@ def sync_merge_requests(project):
                 singer.write_record("merge_requests", transformed_row, time_extracted=utils.now())
 
 
+def sync_releases(project):
+    url = get_url("releases", project['id'])
+    with Transformer(pre_hook=format_timestamp) as transformer:
+        for row in gen_request(url):
+            flatten_id(row, "author")
+            flatten_id(row, "commit")
+            row['project_id'] = project["id"]
+            transformed_row = transformer.transform(row, RESOURCES["releases"]["schema"])
+
+            singer.write_record("releases", transformed_row, time_extracted=utils.now())
+
+
+def sync_tags(project):
+    url = get_url("tags", project['id'])
+    with Transformer(pre_hook=format_timestamp) as transformer:
+        for row in gen_request(url):
+            flatten_id(row, "commit")
+            row['project_id'] = project["id"]
+            transformed_row = transformer.transform(row, RESOURCES["tags"]["schema"])
+
+            singer.write_record("tags", transformed_row, time_extracted=utils.now())
+
+
 def sync_milestones(entity, element="project"):
     url = get_url(element + "_milestones", entity['id'])
 
@@ -296,6 +329,8 @@ def sync_project(pid):
         sync_commits(project)
         sync_branches(project)
         sync_milestones(project)
+        sync_releases(project)
+        sync_tags(project)
 
         singer.write_record("projects", project, time_extracted=time_extracted)
         utils.update_state(STATE, state_key, last_activity_at)
