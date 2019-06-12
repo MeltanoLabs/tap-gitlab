@@ -10,8 +10,29 @@
         "user_id": {
             "type": "integer"
         },
+        "name": {
+            "type": ["null", "string"]
+        },
+        "username": {
+            "type": ["null", "string"]
+        },
         "access_level": {
             "type": ["null", "integer"]
+        },
+        "expires_at": {
+            "anyOf": [
+                {
+                    "type": "null"
+                },
+                {
+                    "type": "string",
+                    "format": "date-time"
+                }
+            ]
+        },
+        "state": {
+            "type": "string"
         }
     }
 }
+

@@ -37,22 +37,22 @@
         "updated_at": {
             "anyOf": [
                 {
-                    "type": "string",
-                    "format": "date-time"
+                    "type": "null"
                 },
                 {
-                    "type": "null"
+                    "type": "string",
+                    "format": "date-time"
                 }
             ]
         },
         "created_at": {
             "anyOf": [
                 {
-                    "type": "string",
-                    "format": "date-time"
+                    "type": "null"
                 },
                 {
-                    "type": "null"
+                    "type": "string",
+                    "format": "date-time"
                 }
             ]
         },
@@ -82,6 +82,26 @@
         },
         "confidential": {
             "type": ["null", "boolean"]
+        },
+        "closed_at": {
+            "anyOf": [
+                {
+                    "type": "null"
+                },
+                {
+                    "type": "string",
+                    "format": "date-time"
+                }
+            ]
+        },
+        "discussion_locked": {
+            "type": ["null", "boolean"]
+        },
+        "has_tasks": {
+            "type": ["null", "boolean"]
+        },
+        "task_status": {
+            "type": ["null", "string"]
         }
     }
 }
