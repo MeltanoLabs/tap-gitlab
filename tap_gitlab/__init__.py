@@ -388,7 +388,13 @@ def main_impl():
     if args.state:
         STATE.update(args.state)
 
-    do_sync()
+    # If discover flag was passed, log an info message and exit
+    if args.discover:
+        LOGGER.info('Schema discovery is not supported by tap-gitlab')
+        sys.exit(1)
+    # Otherwise run in sync mode
+    else:
+        do_sync()
 
 
 def main():
