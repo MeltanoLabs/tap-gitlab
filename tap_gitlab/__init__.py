@@ -16,7 +16,8 @@ CONFIG = {
     'api_url': "https://gitlab.com/api/v3",
     'private_token': None,
     'start_date': None,
-    'groups': ''
+    'groups': '',
+    'ultimate_license': False
 }
 STATE = {}
 
@@ -102,18 +103,36 @@ RESOURCES = {
         'schema': load_schema('group_labels'),
         'key_properties': ['group_id', 'id'],
     },
+    'epics': {
+        'url': '/groups/{}/epics',
+        'schema': load_schema('epics'),
+        'key_properties': ['group_id', 'id'],
+    },
+    'epic_issues': {
+        'url': '/groups/{}/epics/{}/issues',
+        'schema': load_schema('epic_issues'),
+        'key_properties': ['group_id', 'epic_iid', 'epic_issue_id'],
+    },
 }
 
+ULTIMATE_RESOURCES = ("epics", "epic_issues")
 
 LOGGER = singer.get_logger()
 SESSION = requests.Session()
 
+TRUTHY = ("true", "1", "yes", "on")
 
-def get_url(entity, id):
+def truthy(val) -> bool:
+    return str(val).lower() in TRUTHY
+
+def get_url(entity, id, secondary_id=None):
     if not isinstance(id, int):
         id = id.replace("/", "%2F")
 
-    return CONFIG['api_url'] + RESOURCES[entity]['url'].format(id)
+    if secondary_id and not isinstance(secondary_id, int):
+        secondary_id = secondary_id.replace("/", "%2F")
+
+    return CONFIG['api_url'] + RESOURCES[entity]['url'].format(id, secondary_id)
 
 
 def get_start(entity):
@@ -293,6 +312,30 @@ def sync_labels(entity, element="project"):
             transformed_row = transformer.transform(row, RESOURCES[element + "_labels"]["schema"])
             singer.write_record(element + "_labels", transformed_row, time_extracted=utils.now())
 
+def sync_epic_issues(group, epic):
+    url = get_url("epic_issues", group['id'], epic['iid'])
+
+    with Transformer(pre_hook=format_timestamp) as transformer:
+        for row in gen_request(url):
+            row['group_id'] = group['id']
+            row['epic_iid'] = epic['iid']
+            row['issue_id'] = row['id']
+            row['issue_iid'] = row['iid']
+            transformed_row = transformer.transform(row, RESOURCES["epic_issues"]["schema"])
+
+            singer.write_record("epic_issues", transformed_row, time_extracted=utils.now())
+
+def sync_epics(group):
+    url = get_url("epics", group['id'])
+
+    with Transformer(pre_hook=format_timestamp) as transformer:
+        for row in gen_request(url):
+            flatten_id(row, "author")
+            transformed_row = transformer.transform(row, RESOURCES["epics"]["schema"])
+
+            singer.write_record("epics", transformed_row, time_extracted=utils.now())
+
+            sync_epic_issues(group, transformed_row)
 
 def sync_group(gid, pids):
     url = CONFIG['api_url'] + RESOURCES["groups"]['url'].format(gid)
@@ -317,6 +360,9 @@ def sync_group(gid, pids):
     sync_members(group, "group")
 
     sync_labels(group, "group")
+
+    if CONFIG['ultimate_license']:
+        sync_epics(group)
 
     singer.write_record("groups", group, time_extracted=time_extracted)
 
@@ -366,7 +412,8 @@ def do_sync():
     pids = list(filter(None, CONFIG['projects'].split(' ')))
 
     for resource, config in RESOURCES.items():
-        singer.write_schema(resource, config['schema'], config['key_properties'])
+        if (resource not in ULTIMATE_RESOURCES) or CONFIG['ultimate_license']:
+            singer.write_schema(resource, config['schema'], config['key_properties'])
 
     for gid in gids:
         sync_group(gid, pids)
@@ -384,6 +431,7 @@ def main_impl():
     args = utils.parse_args(["private_token", "projects", "start_date"])
 
     CONFIG.update(args.config)
+    CONFIG['ultimate_license'] = truthy(CONFIG['ultimate_license'])
 
     if args.state:
         STATE.update(args.state)

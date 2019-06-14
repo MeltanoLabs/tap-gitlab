@@ -26,26 +26,12 @@
             "type": ["null", "integer"]
         },
         "updated_at": {
-            "anyOf": [
-                {
-                    "type": "string",
-                    "format": "date-time"
-                },
-                {
-                    "type": "null"
-                }
-            ]
+            "type": "string",
+            "format": "date-time"
         },
         "created_at": {
-            "anyOf": [
-                {
-                    "type": "string",
-                    "format": "date-time"
-                },
-                {
-                    "type": "null"
-                }
-            ]
+            "type": "string",
+            "format": "date-time"
         },
         "title": {
             "type": ["null", "string"]
