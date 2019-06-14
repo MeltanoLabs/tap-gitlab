@@ -19,6 +19,8 @@ This tap:
   - [Releases](https://docs.gitlab.com/ee/api/releases/index.html)
   - [Group Labels](https://docs.gitlab.com/ee/api/group_labels.html)
   - [Project Labels](https://docs.gitlab.com/ee/api/labels.html)
+  - [Epics](https://docs.gitlab.com/ee/api/epics.html) (only available for Gitlab Ultimate and Gitlab.com Gold accounts)
+  - [Epic Issues](https://docs.gitlab.com/ee/api/epic_issues.html) (only available for Gitlab Ultimate and Gitlab.com Gold accounts)
 - Outputs the schema for each resource
 - Incrementally pulls data based on the input state
 
@@ -45,7 +47,7 @@ This tap:
     - Groups to track (space separated)    
     - Projects to track (space separated)
     
-    Notes:
+    Notes on group and project options:
     - either groups or projects need to be provided
     - filling in 'groups' but leaving 'projects' empty will sync all group projects.
     - filling in 'projects' but leaving 'groups' empty will sync selected projects.
@@ -57,9 +59,12 @@ This tap:
       "private_token": "your-access-token",
       "groups": "myorg mygroup", 
       "projects": "myorg/repo-a myorg/repo-b",
-      "start_date": "2018-01-01T00:00:00Z"
+      "start_date": "2018-01-01T00:00:00Z",
+      "ultimate_license": true
     }
     ```
+
+    If `ultimate_license` is true (defaults to false), then the GitLab account used has access to the Gitlab Ultimate or Gitlab.com Gold features. It will enable fetching Epics, Epic Issues and other entities available for Gitlab Ultimate and Gitlab.com Gold accounts.
 
 4. [Optional] Create the initial state file
 

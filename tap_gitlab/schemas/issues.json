@@ -37,22 +37,22 @@
         "updated_at": {
             "anyOf": [
                 {
-                    "type": "null"
-                },
-                {
                     "type": "string",
                     "format": "date-time"
+                },
+                {
+                    "type": "null"
                 }
             ]
         },
         "created_at": {
             "anyOf": [
                 {
-                    "type": "null"
-                },
-                {
                     "type": "string",
                     "format": "date-time"
+                },
+                {
+                    "type": "null"
                 }
             ]
         },
@@ -84,15 +84,7 @@
             "type": ["null", "boolean"]
         },
         "closed_at": {
-            "anyOf": [
-                {
-                    "type": "null"
-                },
-                {
-                    "type": "string",
-                    "format": "date-time"
-                }
-            ]
+            "type": ["null", "string"]
         },
         "discussion_locked": {
             "type": ["null", "boolean"]
