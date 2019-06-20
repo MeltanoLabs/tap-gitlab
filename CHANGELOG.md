@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.8.0
+  * Add support for incremental extraction of Commits, Issues, Merge Requests and Epics.
+  * Properly use STATE and the `start_date` to only fetch entities created/updated after that date. 
+    (tap-gitlab was fetching everything and filtering the results afterwards, which resulted in huge overhead for large projects)
+  * Add dedicated STATE for commits, issues and merge_requests per Project and for epics per Group.
+  * Ensure that the last message emitted is the final STATE.
+
+
+## 0.7.1
+  * Fix the pagination not working for very large projects with more than 10,000 entities per response.
+  * Use the `X-Next-Page` header instead of the `X-Total-Pages` header.
+    https://docs.gitlab.com/ee/api/#other-pagination-headers
+  * Use the `per_page` param to fetch 100 records per call instead of 20. 
+    No more need for 5K calls to fetch all the gitlab-ce commits. A win for all.
+  * Explicitly set the per_page param to 20 for labels API end points until gitlab-org/gitlab-ce#63103 is fixed.
+
 ## 0.7.0
   * Update config options to allow for Gitlab Ultimate and Gitlab.com Gold account features
   * Add support for fetching Epics and Epic Issues for Gitlab Ultimate and Gitlab.com Gold accounts
