@@ -29,87 +29,87 @@ def load_schema(entity):
 
 RESOURCES = {
     'projects': {
-        'url': '/projects/{}?statistics=1',
+        'url': '/projects/{id}?statistics=1',
         'schema': load_schema('projects'),
         'key_properties': ['id'],
     },
     'branches': {
-        'url': '/projects/{}/repository/branches',
+        'url': '/projects/{id}/repository/branches',
         'schema': load_schema('branches'),
         'key_properties': ['project_id', 'name'],
     },
     'commits': {
-        'url': '/projects/{}/repository/commits',
+        'url': '/projects/{id}/repository/commits?since={start_date}',
         'schema': load_schema('commits'),
         'key_properties': ['id'],
     },
     'issues': {
-        'url': '/projects/{}/issues?scope=all',
+        'url': '/projects/{id}/issues?scope=all&updated_after={start_date}',
         'schema': load_schema('issues'),
         'key_properties': ['id'],
     },
     'merge_requests': {
-        'url': '/projects/{}/merge_requests?scope=all',
+        'url': '/projects/{id}/merge_requests?scope=all&updated_after={start_date}',
         'schema': load_schema('merge_requests'),
         'key_properties': ['id'],
     },
     'project_milestones': {
-        'url': '/projects/{}/milestones',
+        'url': '/projects/{id}/milestones',
         'schema': load_schema('milestones'),
         'key_properties': ['id'],
     },
     'group_milestones': {
-        'url': '/groups/{}/milestones',
+        'url': '/groups/{id}/milestones',
         'schema': load_schema('milestones'),
         'key_properties': ['id'],
     },
     'users': {
-        'url': '/projects/{}/users',
+        'url': '/projects/{id}/users',
         'schema': load_schema('users'),
         'key_properties': ['id'],
     },
     'groups': {
-        'url': '/groups/{}',
+        'url': '/groups/{id}',
         'schema': load_schema('groups'),
         'key_properties': ['id'],
     },
     'project_members': {
-        'url': '/projects/{}/members',
+        'url': '/projects/{id}/members',
         'schema': load_schema('project_members'),
         'key_properties': ['project_id', 'id'],
     },
     'group_members': {
-        'url': '/groups/{}/members',
+        'url': '/groups/{id}/members',
         'schema': load_schema('group_members'),
         'key_properties': ['group_id', 'id'],
     },
     'releases': {
-        'url': '/projects/{}/releases',
+        'url': '/projects/{id}/releases',
         'schema': load_schema('releases'),
         'key_properties': ['project_id', 'commit_id', 'tag_name'],
     },
     'tags': {
-        'url': '/projects/{}/repository/tags',
+        'url': '/projects/{id}/repository/tags',
         'schema': load_schema('tags'),
         'key_properties': ['project_id', 'commit_id', 'name'],
     },
     'project_labels': {
-        'url': '/projects/{}/labels',
+        'url': '/projects/{id}/labels',
         'schema': load_schema('project_labels'),
         'key_properties': ['project_id', 'id'],
     },
     'group_labels': {
-        'url': '/groups/{}/labels',
+        'url': '/groups/{id}/labels',
         'schema': load_schema('group_labels'),
         'key_properties': ['group_id', 'id'],
     },
     'epics': {
-        'url': '/groups/{}/epics',
+        'url': '/groups/{id}/epics?updated_after={start_date}',
         'schema': load_schema('epics'),
         'key_properties': ['group_id', 'id'],
     },
     'epic_issues': {
-        'url': '/groups/{}/epics/{}/issues',
+        'url': '/groups/{id}/epics/{secondary_id}/issues',
         'schema': load_schema('epic_issues'),
         'key_properties': ['group_id', 'epic_iid', 'epic_issue_id'],
     },
@@ -125,20 +125,23 @@ TRUTHY = ("true", "1", "yes", "on")
 def truthy(val) -> bool:
     return str(val).lower() in TRUTHY
 
-def get_url(entity, id, secondary_id=None):
+def get_url(entity, id, secondary_id=None, start_date=None):
     if not isinstance(id, int):
         id = id.replace("/", "%2F")
 
     if secondary_id and not isinstance(secondary_id, int):
         secondary_id = secondary_id.replace("/", "%2F")
 
-    return CONFIG['api_url'] + RESOURCES[entity]['url'].format(id, secondary_id)
+    return CONFIG['api_url'] + RESOURCES[entity]['url'].format(
+            id=id,
+            secondary_id=secondary_id,
+            start_date=start_date
+        )
 
 
 def get_start(entity):
     if entity not in STATE:
         STATE[entity] = CONFIG['start_date']
-
     return STATE[entity]
 
 
@@ -181,6 +184,9 @@ def gen_request(url):
         'per_page': per_page
     }
 
+    # X-Total-Pages header is not always available since GitLab 11.8
+    #  https://docs.gitlab.com/ee/api/#other-pagination-headers
+    # X-Next-Page to check if there is another page available and iterate
     next_page = 1
 
     while next_page:
@@ -205,9 +211,8 @@ def flatten_id(item, target):
     else:
         item[target + '_id'] = None
 
-
 def sync_branches(project):
-    url = get_url("branches", project['id'])
+    url = get_url(entity="branches", id=project['id'])
     with Transformer(pre_hook=format_timestamp) as transformer:
         for row in gen_request(url):
             row['project_id'] = project['id']
@@ -215,31 +220,50 @@ def sync_branches(project):
             transformed_row = transformer.transform(row, RESOURCES["branches"]["schema"])
             singer.write_record("branches", transformed_row, time_extracted=utils.now())
 
-
 def sync_commits(project):
-    url = get_url("commits", project['id'])
+    entity = "commits"
+    # Keep a state for the commits fetched per project
+    state_key = "project_{}_commits".format(project["id"])
+    start_date=get_start(state_key)
+
+    url = get_url(entity=entity, id=project['id'], start_date=start_date)
     with Transformer(pre_hook=format_timestamp) as transformer:
         for row in gen_request(url):
             row['project_id'] = project["id"]
-            transformed_row = transformer.transform(row, RESOURCES["commits"]["schema"])
-            singer.write_record("commits", transformed_row, time_extracted=utils.now())
+            transformed_row = transformer.transform(row, RESOURCES[entity]["schema"])
 
+            singer.write_record(entity, transformed_row, time_extracted=utils.now())
+            utils.update_state(STATE, state_key, row['created_at'])
+
+    singer.write_state(STATE)
 
 def sync_issues(project):
-    url = get_url("issues", project['id'])
+    entity = "issues"
+    # Keep a state for the issues fetched per project
+    state_key = "project_{}_issues".format(project["id"])
+    start_date=get_start(state_key)
+
+    url = get_url(entity=entity, id=project['id'], start_date=start_date)
     with Transformer(pre_hook=format_timestamp) as transformer:
         for row in gen_request(url):
             flatten_id(row, "author")
             flatten_id(row, "assignee")
             flatten_id(row, "milestone")
-            transformed_row = transformer.transform(row, RESOURCES["issues"]["schema"])
+            transformed_row = transformer.transform(row, RESOURCES[entity]["schema"])
 
-            if row["updated_at"] >= get_start("project_{}".format(project["id"])):
-                singer.write_record("issues", transformed_row, time_extracted=utils.now())
+            singer.write_record(entity, transformed_row, time_extracted=utils.now())
+            utils.update_state(STATE, state_key, row['updated_at'])
+
+    singer.write_state(STATE)
 
 
 def sync_merge_requests(project):
-    url = get_url("merge_requests", project['id'])
+    entity = "merge_requests"
+    # Keep a state for the merge requests fetched per project
+    state_key = "project_{}_merge_requests".format(project["id"])
+    start_date=get_start(state_key)
+
+    url = get_url(entity=entity, id=project['id'], start_date=start_date)
     with Transformer(pre_hook=format_timestamp) as transformer:
         for row in gen_request(url):
             flatten_id(row, "author")
@@ -247,14 +271,15 @@ def sync_merge_requests(project):
             flatten_id(row, "milestone")
             flatten_id(row, "merged_by")
             flatten_id(row, "closed_by")
-            transformed_row = transformer.transform(row, RESOURCES["merge_requests"]["schema"])
+            transformed_row = transformer.transform(row, RESOURCES[entity]["schema"])
 
-            if row["updated_at"] >= get_start("project_{}".format(project["id"])):
-                singer.write_record("merge_requests", transformed_row, time_extracted=utils.now())
+            singer.write_record(entity, transformed_row, time_extracted=utils.now())
+            utils.update_state(STATE, state_key, row['updated_at'])
 
+    singer.write_state(STATE)
 
 def sync_releases(project):
-    url = get_url("releases", project['id'])
+    url = get_url(entity="releases", id=project['id'])
     with Transformer(pre_hook=format_timestamp) as transformer:
         for row in gen_request(url):
             flatten_id(row, "author")
@@ -266,7 +291,7 @@ def sync_releases(project):
 
 
 def sync_tags(project):
-    url = get_url("tags", project['id'])
+    url = get_url(entity="tags", id=project['id'])
     with Transformer(pre_hook=format_timestamp) as transformer:
         for row in gen_request(url):
             flatten_id(row, "commit")
@@ -277,7 +302,7 @@ def sync_tags(project):
 
 
 def sync_milestones(entity, element="project"):
-    url = get_url(element + "_milestones", entity['id'])
+    url = get_url(entity=element + "_milestones", id=entity['id'])
 
     with Transformer(pre_hook=format_timestamp) as transformer:
         for row in gen_request(url):
@@ -287,7 +312,7 @@ def sync_milestones(entity, element="project"):
                 singer.write_record(element + "_milestones", transformed_row, time_extracted=utils.now())
 
 def sync_users(project):
-    url = get_url("users", project['id'])
+    url = get_url(entity="users", id=project['id'])
     project["users"] = []
     with Transformer(pre_hook=format_timestamp) as transformer:
         for row in gen_request(url):
@@ -297,7 +322,7 @@ def sync_users(project):
 
 
 def sync_members(entity, element="project"):
-    url = get_url(element + "_members", entity['id'])
+    url = get_url(entity=element + "_members", id=entity['id'])
 
     with Transformer(pre_hook=format_timestamp) as transformer:
         for row in gen_request(url):
@@ -313,7 +338,7 @@ def sync_members(entity, element="project"):
 
 
 def sync_labels(entity, element="project"):
-    url = get_url(element + "_labels", entity['id'])
+    url = get_url(entity=element + "_labels", id=entity['id'])
 
     with Transformer(pre_hook=format_timestamp) as transformer:
         for row in gen_request(url):
@@ -322,7 +347,7 @@ def sync_labels(entity, element="project"):
             singer.write_record(element + "_labels", transformed_row, time_extracted=utils.now())
 
 def sync_epic_issues(group, epic):
-    url = get_url("epic_issues", group['id'], epic['iid'])
+    url = get_url(entity="epic_issues", id=group['id'], secondary_id=epic['iid'])
 
     with Transformer(pre_hook=format_timestamp) as transformer:
         for row in gen_request(url):
@@ -335,19 +360,29 @@ def sync_epic_issues(group, epic):
             singer.write_record("epic_issues", transformed_row, time_extracted=utils.now())
 
 def sync_epics(group):
-    url = get_url("epics", group['id'])
+    entity = "epics"
+    # Keep a state for the epics fetched per group
+    state_key = "group_{}_epics".format(group['id'])
+    start_date=get_start(state_key)
 
+    url = get_url(entity=entity, id=group['id'], start_date=start_date)
     with Transformer(pre_hook=format_timestamp) as transformer:
         for row in gen_request(url):
             flatten_id(row, "author")
-            transformed_row = transformer.transform(row, RESOURCES["epics"]["schema"])
+            transformed_row = transformer.transform(row, RESOURCES[entity]["schema"])
 
-            singer.write_record("epics", transformed_row, time_extracted=utils.now())
+            # Write the Epic record
+            singer.write_record(entity, transformed_row, time_extracted=utils.now())
+            utils.update_state(STATE, state_key, row['updated_at'])
 
+            # And then sync all the issues for that Epic
+            # (if it has changed, new issues may be there to fetch)
             sync_epic_issues(group, transformed_row)
 
+    singer.write_state(STATE)
+
 def sync_group(gid, pids):
-    url = CONFIG['api_url'] + RESOURCES["groups"]['url'].format(gid)
+    url = get_url(entity="groups", id=gid)
 
     data = request(url).json()
     time_extracted = utils.now()
@@ -377,7 +412,7 @@ def sync_group(gid, pids):
 
 
 def sync_project(pid):
-    url = get_url("projects", pid)
+    url = get_url(entity="projects", id=pid)
     data = request(url).json()
     time_extracted = utils.now()
 
@@ -431,6 +466,14 @@ def do_sync():
         # When not syncing groups
         for pid in pids:
             sync_project(pid)
+
+    # Write the final STATE
+    # This fixes syncing using groups, which don't emit a STATE message
+    #  so the last message is not a STATE message
+    #  which, in turn, breaks the behavior of some targets that expect a STATE
+    #  as the last message
+    # It is also a safeguard for future updates
+    singer.write_state(STATE)
 
     LOGGER.info("Sync complete")
 
