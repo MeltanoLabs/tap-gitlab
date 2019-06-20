@@ -11,7 +11,7 @@ import pytz
 import backoff
 from strict_rfc3339 import rfc3339_to_timestamp
 
-PER_PAGE = 100
+PER_PAGE_MAX = 100
 CONFIG = {
     'api_url': "https://gitlab.com/api/v3",
     'private_token': None,
@@ -168,18 +168,27 @@ def request(url, params=None):
 
 
 def gen_request(url):
-    params = {'page': 1}
-    resp = request(url, params)
-    last_page = int(resp.headers.get('X-Total-Pages', 1))
+    if 'labels' in url:
+        # The labels API is timing out for large per_page values
+        #  https://gitlab.com/gitlab-org/gitlab-ce/issues/63103
+        # Keeping it at 20 until the bug is fixed
+        per_page = 20
+    else:
+        per_page = PER_PAGE_MAX
 
-    for row in resp.json():
-        yield row
+    params = {
+        'page': 1,
+        'per_page': per_page
+    }
 
-    for page in range(2, last_page + 1):
-        params['page'] = page
+    next_page = 1
+
+    while next_page:
+        params['page'] = int(next_page)
         resp = request(url, params)
         for row in resp.json():
             yield row
+        next_page = resp.headers.get('X-Next-Page', None)
 
 def format_timestamp(data, typ, schema):
     result = data
