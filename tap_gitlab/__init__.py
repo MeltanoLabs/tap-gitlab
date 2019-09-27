@@ -13,11 +13,12 @@ from strict_rfc3339 import rfc3339_to_timestamp
 
 PER_PAGE_MAX = 100
 CONFIG = {
-    'api_url': "https://gitlab.com/api/v3",
+    'api_url': "https://gitlab.com/api/v4",
     'private_token': None,
     'start_date': None,
     'groups': '',
-    'ultimate_license': False
+    'ultimate_license': False,
+    'fetch_merge_request_commits': False
 }
 STATE = {}
 
@@ -52,6 +53,11 @@ RESOURCES = {
         'url': '/projects/{id}/merge_requests?scope=all&updated_after={start_date}',
         'schema': load_schema('merge_requests'),
         'key_properties': ['id'],
+    },
+    'merge_request_commits': {
+        'url': '/projects/{id}/merge_requests/{secondary_id}/commits',
+        'schema': load_schema('merge_request_commits'),
+        'key_properties': ['project_id', 'merge_request_iid', 'commit_id'],
     },
     'project_milestones': {
         'url': '/projects/{id}/milestones',
@@ -198,7 +204,7 @@ def gen_request(url):
 
 def format_timestamp(data, typ, schema):
     result = data
-    if typ == 'string' and schema.get('format') == 'date-time':
+    if data and typ == 'string' and schema.get('format') == 'date-time':
         rfc3339_ts = rfc3339_to_timestamp(data)
         utc_dt = datetime.datetime.utcfromtimestamp(rfc3339_ts).replace(tzinfo=pytz.UTC)
         result = utils.strftime(utc_dt)
@@ -249,13 +255,32 @@ def sync_issues(project):
             flatten_id(row, "author")
             flatten_id(row, "assignee")
             flatten_id(row, "milestone")
+
+            # Get the assignee ids
+            assignee_ids = []
+            for assignee in row.get("assignees"):
+                assignee_ids.append(assignee["id"])
+            row["assignees"] = assignee_ids
+
+            # Get the time_stats
+            time_stats = row.get("time_stats")
+            if time_stats:
+                row["time_estimate"] = time_stats.get("time_estimate")
+                row["total_time_spent"] = time_stats.get("total_time_spent")
+                row["human_time_estimate"] = time_stats.get("human_time_estimate")
+                row["human_total_time_spent"] = time_stats.get("human_total_time_spent")
+            else:
+                row["time_estimate"] = None
+                row["total_time_spent"] = None
+                row["human_time_estimate"] = None
+                row["human_total_time_spent"] = None
+
             transformed_row = transformer.transform(row, RESOURCES[entity]["schema"])
 
             singer.write_record(entity, transformed_row, time_extracted=utils.now())
             utils.update_state(STATE, state_key, row['updated_at'])
 
     singer.write_state(STATE)
-
 
 def sync_merge_requests(project):
     entity = "merge_requests"
@@ -271,12 +296,51 @@ def sync_merge_requests(project):
             flatten_id(row, "milestone")
             flatten_id(row, "merged_by")
             flatten_id(row, "closed_by")
+
+            # Get the assignee ids
+            assignee_ids = []
+            for assignee in row.get("assignees"):
+                assignee_ids.append(assignee["id"])
+            row["assignees"] = assignee_ids
+
+            # Get the time_stats
+            time_stats = row.get("time_stats")
+            if time_stats:
+                row["time_estimate"] = time_stats.get("time_estimate")
+                row["total_time_spent"] = time_stats.get("total_time_spent")
+                row["human_time_estimate"] = time_stats.get("human_time_estimate")
+                row["human_total_time_spent"] = time_stats.get("human_total_time_spent")
+            else:
+                row["time_estimate"] = None
+                row["total_time_spent"] = None
+                row["human_time_estimate"] = None
+                row["human_total_time_spent"] = None
+
             transformed_row = transformer.transform(row, RESOURCES[entity]["schema"])
 
+            # Write the MR record
             singer.write_record(entity, transformed_row, time_extracted=utils.now())
             utils.update_state(STATE, state_key, row['updated_at'])
 
+            # And then sync all the commits for this MR
+            # (if it has changed, new commits may be there to fetch)
+            if CONFIG['fetch_merge_request_commits']:
+                sync_merge_request_commits(project, transformed_row)
+
     singer.write_state(STATE)
+
+def sync_merge_request_commits(project, merge_request):
+    url = get_url(entity="merge_request_commits", id=project['id'], secondary_id=merge_request['iid'])
+
+    with Transformer(pre_hook=format_timestamp) as transformer:
+        for row in gen_request(url):
+            row['project_id'] = project['id']
+            row['merge_request_iid'] = merge_request['iid']
+            row['commit_id'] = row['id']
+            row['commit_short_id'] = row['short_id']
+            transformed_row = transformer.transform(row, RESOURCES["merge_request_commits"]["schema"])
+
+            singer.write_record("merge_request_commits", transformed_row, time_extracted=utils.now())
 
 def sync_releases(project):
     url = get_url(entity="releases", id=project['id'])
@@ -456,8 +520,16 @@ def do_sync():
     pids = list(filter(None, CONFIG['projects'].split(' ')))
 
     for resource, config in RESOURCES.items():
-        if (resource not in ULTIMATE_RESOURCES) or CONFIG['ultimate_license']:
-            singer.write_schema(resource, config['schema'], config['key_properties'])
+        if (
+            resource in ULTIMATE_RESOURCES
+            and not CONFIG['ultimate_license']
+        ) or (
+            resource == "merge_request_commits"
+            and not CONFIG['fetch_merge_request_commits']
+        ):
+            continue
+
+        singer.write_schema(resource, config['schema'], config['key_properties'])
 
     for gid in gids:
         sync_group(gid, pids)
@@ -484,6 +556,7 @@ def main_impl():
 
     CONFIG.update(args.config)
     CONFIG['ultimate_license'] = truthy(CONFIG['ultimate_license'])
+    CONFIG['fetch_merge_request_commits'] = truthy(CONFIG['fetch_merge_request_commits'])
 
     if args.state:
         STATE.update(args.state)

@@ -19,19 +19,47 @@
         "assignee_id": {
             "type": ["null", "integer"]
         },
+        "assignees": {
+            "type": "array",
+            "items": {
+                "type": "integer"
+            }
+        },        
         "merged_by_id": {
             "type": ["null", "integer"]
         },
         "closed_by_id": {
             "type": ["null", "integer"]
         },
+        "created_at": {
+            "type": "string",
+            "format": "date-time"
+        },
         "updated_at": {
             "type": "string",
             "format": "date-time"
         },
-        "created_at": {
-            "type": "string",
-            "format": "date-time"
+        "merged_at": {
+            "anyOf": [
+                {
+                    "type": "string",
+                    "format": "date-time"
+                },
+                {
+                    "type": "null"
+                }
+            ]
+        },
+        "closed_at": {
+            "anyOf": [
+                {
+                    "type": "string",
+                    "format": "date-time"
+                },
+                {
+                    "type": "null"
+                }
+            ]
         },
         "title": {
             "type": ["null", "string"]
@@ -98,6 +126,18 @@
         },
         "squash": {
             "type": ["null", "boolean"]
-        }
+        },
+        "time_estimate": {
+            "type": ["null", "integer"]
+        },
+        "total_time_spent": {
+            "type": ["null", "integer"]
+        },
+        "human_time_estimate": {
+            "type": ["null", "string"]
+        },
+        "human_total_time_spent": {
+            "type": ["null", "string"]
+        }   
     }
 }

@@ -4,6 +4,12 @@
         "project_id": {
             "type": "integer"
         },
+        "id": {
+            "type": "integer"
+        },
+        "iid": {
+            "type": "integer"
+        },
         "milestone_id": {
             "type": ["null", "integer"]
         },
@@ -13,17 +19,20 @@
         "assignee_id": {
             "type": ["null", "integer"]
         },
+        "assignees": {
+            "type": "array",
+            "items": {
+                "type": "integer"
+            }
+        },
+        "title": {
+            "type": ["null", "string"]
+        },
         "description": {
             "type": ["null", "string"]
         },
         "state": {
             "type": ["null", "string"]
-        },
-        "id": {
-            "type": "integer"
-        },
-        "iid": {
-            "type": "integer"
         },
         "labels": {
             "type": "array",
@@ -31,8 +40,16 @@
                 "type": "string"
             }
         },
-        "title": {
-            "type": ["null", "string"]
+        "created_at": {
+            "anyOf": [
+                {
+                    "type": "string",
+                    "format": "date-time"
+                },
+                {
+                    "type": "null"
+                }
+            ]
         },
         "updated_at": {
             "anyOf": [
@@ -45,7 +62,7 @@
                 }
             ]
         },
-        "created_at": {
+        "closed_at": {
             "anyOf": [
                 {
                     "type": "string",
@@ -83,9 +100,6 @@
         "confidential": {
             "type": ["null", "boolean"]
         },
-        "closed_at": {
-            "type": ["null", "string"]
-        },
         "discussion_locked": {
             "type": ["null", "boolean"]
         },
@@ -94,6 +108,18 @@
         },
         "task_status": {
             "type": ["null", "string"]
-        }
+        },
+        "time_estimate": {
+            "type": ["null", "integer"]
+        },
+        "total_time_spent": {
+            "type": ["null", "integer"]
+        },
+        "human_time_estimate": {
+            "type": ["null", "string"]
+        },
+        "human_total_time_spent": {
+            "type": ["null", "string"]
+        }   
     }
 }
