@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.0
+  * Add {merged_at, closed_at, assignees, time_estimate, total_time_spent, human_time_estimate, human_total_time_spent} to Merge Requests.
+  * Add {assignees, time_estimate, total_time_spent, human_time_estimate, human_total_time_spent} to Issues.
+  * Add support for extracting the commits of a Merge Request and storing them to table `merge_request_commits`.
+  * Add `fetch_merge_request_commits` option to config. If fetch_merge_request_commits is true (defaults to false), then for each Merge Request, also fetch the MR's commits and create the join table `merge_request_commits` with the Merge Request and related Commit IDs.
+
 ## 0.8.0
   * Add support for incremental extraction of Commits, Issues, Merge Requests and Epics.
   * Properly use STATE and the `start_date` to only fetch entities created/updated after that date. 
