@@ -19,22 +19,36 @@
         "description": {
             "type": ["null", "string"]
         },
-        "due_date": {
+        "start_date": {
             "type": ["null", "string"]
         },
-        "start_date": {
+        "due_date": {
             "type": ["null", "string"]
         },
         "state": {
             "type": ["null", "string"]
         },
-        "updated_at": {
-            "type": "string",
-            "format": "date-time"
-        },
         "created_at": {
-            "type": "string",
-            "format": "date-time"
+            "anyOf": [
+                {
+                    "type": "string",
+                    "format": "date-time"
+                },
+                {
+                    "type": "null"
+                }
+            ]
+        },
+        "updated_at": {
+            "anyOf": [
+                {
+                    "type": "string",
+                    "format": "date-time"
+                },
+                {
+                    "type": "null"
+                }
+            ]
         }
     }
 }
