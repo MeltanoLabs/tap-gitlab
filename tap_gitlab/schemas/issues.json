@@ -25,6 +25,9 @@
                 "type": "integer"
             }
         },
+        "closed_by_id": {
+            "type": ["null", "integer"]
+        },
         "title": {
             "type": ["null", "string"]
         },

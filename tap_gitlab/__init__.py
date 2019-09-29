@@ -254,6 +254,7 @@ def sync_issues(project):
         for row in gen_request(url):
             flatten_id(row, "author")
             flatten_id(row, "assignee")
+            flatten_id(row, "closed_by")
             flatten_id(row, "milestone")
 
             # Get the assignee ids
