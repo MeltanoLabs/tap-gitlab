@@ -77,18 +77,16 @@ This tap:
 
     ```json
     {
-      "branches": "2017-01-17T00:00:00Z",
-      "commits": "2017-01-17T00:00:00Z",
-      "issues": "2017-01-17T00:00:00Z",
-      "projects": "2017-01-17T00:00:00Z",
-      "project_milestones": "2017-01-17T00:00:00Z", 
-      "users": "2017-01-17T00:00:00Z",
-      "group_milestones": "2017-01-17T00:00:00Z"
+      "project_278964": "2017-01-17T00:00:00Z",
+      "project_278964_issues": "2017-01-17T00:00:00Z",
+      "project_278964_merge_requests": "2017-01-17T00:00:00Z",
+      "project_278964_commits": "2017-01-17T00:00:00Z"
     }
     ```
-    
+   
     Note:
-    - currently, groups don't have a date field which can be tracked
+    - You have to provide the id of each project you are syncing. For example, in the case of `gitlab-org/gitlab` it is 278964.
+    - You can find the Project ID for a project in the homepage for the project, under its name.
 
 5. Run the application
 

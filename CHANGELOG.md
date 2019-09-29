@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.9.1
+  * Update Issues to also fetch the closed_by_id attribute.
+  * Always load all extracted milestones, not only the ones updated after start_date.
+
 ## 0.9.0
   * Add {merged_at, closed_at, assignees, time_estimate, total_time_spent, human_time_estimate, human_total_time_spent} to Merge Requests.
   * Add {assignees, time_estimate, total_time_spent, human_time_estimate, human_total_time_spent} to Issues.
