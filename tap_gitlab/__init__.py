@@ -373,8 +373,7 @@ def sync_milestones(entity, element="project"):
         for row in gen_request(url):
             transformed_row = transformer.transform(row, RESOURCES[element + "_milestones"]["schema"])
 
-            if row["updated_at"] >= get_start(element + "_{}".format(entity["id"])):
-                singer.write_record(element + "_milestones", transformed_row, time_extracted=utils.now())
+            singer.write_record(element + "_milestones", transformed_row, time_extracted=utils.now())
 
 def sync_users(project):
     url = get_url(entity="users", id=project['id'])
