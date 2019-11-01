@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.9.2
+  * [#16](https://gitlab.com/meltano/tap-gitlab/issues/16) Handle 401 (Unauthorized), 403 (Forbidden) and 404 (Not Found) Resource errors gracefully: Skip extracting that resource and continue with the rest. That can happen, for example, when accessing a private project or accessing the members, milestones or labels of a project without sufficient privileges. 
+
 ## 0.9.1
   * Update Issues to also fetch the closed_by_id attribute.
   * Always load all extracted milestones, not only the ones updated after start_date.

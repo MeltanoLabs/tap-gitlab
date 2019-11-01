@@ -128,6 +128,12 @@ SESSION = requests.Session()
 
 TRUTHY = ("true", "1", "yes", "on")
 
+class ResourceInaccessible(Exception):
+    """
+    Base exception for Rousources the current user can not access.
+    e.g. Unauthorized, Forbidden, Not Found errors
+    """
+
 def truthy(val) -> bool:
     return str(val).lower() in TRUTHY
 
@@ -167,14 +173,17 @@ def request(url, params=None):
     LOGGER.info("GET {}".format(req.url))
     resp = SESSION.send(req)
 
-    if resp.status_code >= 400:
+    if resp.status_code in [401, 403, 404]:
+        LOGGER.info("Skipping request to {}".format(req.url))
+        LOGGER.info("Reason: {} - {}".format(resp.status_code, resp.content))
+        raise ResourceInaccessible
+    elif resp.status_code >= 400:
         LOGGER.critical(
             "Error making request to GitLab API: GET {} [{} - {}]".format(
                 req.url, resp.status_code, resp.content))
         sys.exit(1)
 
     return resp
-
 
 def gen_request(url):
     if 'labels' in url:
@@ -195,12 +204,17 @@ def gen_request(url):
     # X-Next-Page to check if there is another page available and iterate
     next_page = 1
 
-    while next_page:
-        params['page'] = int(next_page)
-        resp = request(url, params)
-        for row in resp.json():
-            yield row
-        next_page = resp.headers.get('X-Next-Page', None)
+    try:
+        while next_page:
+            params['page'] = int(next_page)
+            resp = request(url, params)
+            for row in resp.json():
+                yield row
+            next_page = resp.headers.get('X-Next-Page', None)
+    except ResourceInaccessible as exc:
+        # Don't halt execution if a Resource is Inaccessible
+        # Just skip it and continue with the rest of the extraction
+        return []
 
 def format_timestamp(data, typ, schema):
     result = data
@@ -448,7 +462,13 @@ def sync_epics(group):
 def sync_group(gid, pids):
     url = get_url(entity="groups", id=gid)
 
-    data = request(url).json()
+    try:
+        data = request(url).json()
+    except ResourceInaccessible as exc:
+        # Don't halt execution if a Group is Inaccessible
+        # Just skip it and continue with the rest of the extraction
+        return
+
     time_extracted = utils.now()
 
     with Transformer(pre_hook=format_timestamp) as transformer:
@@ -477,7 +497,14 @@ def sync_group(gid, pids):
 
 def sync_project(pid):
     url = get_url(entity="projects", id=pid)
-    data = request(url).json()
+
+    try:
+        data = request(url).json()
+    except ResourceInaccessible as exc:
+        # Don't halt execution if a Project is Inaccessible
+        # Just skip it and continue with the rest of the extraction
+        return
+
     time_extracted = utils.now()
 
     with Transformer(pre_hook=format_timestamp) as transformer:
@@ -553,6 +580,7 @@ def do_sync():
 def main_impl():
     # TODO: Address properties that are required or not
     args = utils.parse_args(["private_token", "projects", "start_date"])
+    args.config["private_token"] = args.config["private_token"].strip()
 
     CONFIG.update(args.config)
     CONFIG['ultimate_license'] = truthy(CONFIG['ultimate_license'])
