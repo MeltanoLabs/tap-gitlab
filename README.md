@@ -19,8 +19,8 @@ This tap:
   - [Releases](https://docs.gitlab.com/ee/api/releases/index.html)
   - [Group Labels](https://docs.gitlab.com/ee/api/group_labels.html)
   - [Project Labels](https://docs.gitlab.com/ee/api/labels.html)
-  - [Epics](https://docs.gitlab.com/ee/api/epics.html) (only available for Gitlab Ultimate and Gitlab.com Gold accounts)
-  - [Epic Issues](https://docs.gitlab.com/ee/api/epic_issues.html) (only available for Gitlab Ultimate and Gitlab.com Gold accounts)
+  - [Epics](https://docs.gitlab.com/ee/api/epics.html) (only available for GitLab Ultimate and GitLab.com Gold accounts)
+  - [Epic Issues](https://docs.gitlab.com/ee/api/epic_issues.html) (only available for GitLab Ultimate and GitLab.com Gold accounts)
 - Outputs the schema for each resource
 - Incrementally pulls data based on the input state
 
@@ -55,7 +55,7 @@ This tap:
 
     ```json
     {
-      "api_url": "https://gitlab.com/api/v4",
+      "api_url": "https://gitlab.com",
       "private_token": "your-access-token",
       "groups": "myorg mygroup", 
       "projects": "myorg/repo-a myorg/repo-b",
@@ -65,9 +65,11 @@ This tap:
     }
     ```
 
-    If `ultimate_license` is true (defaults to false), then the GitLab account used has access to the Gitlab Ultimate or Gitlab.com Gold features. It will enable fetching Epics, Epic Issues and other entities available for Gitlab Ultimate and Gitlab.com Gold accounts.
+    The `api_url` requires only the base URL of the GitLab instance, e.g. `https://gitlab.com`. `tap-gitlab` automatically uses the latest (v4) version of GitLab's API. If you really want to set a different API version, you can set the full API URL, e.g. `https://gitlab.com/api/v3`, but be warned that this tap is built for API v4.
 
-    If `fetch_merge_request_commits` is true (defaults to false), then for each Merge Request, also fetch the MR's commits and create the join table `merge_request_commits` with the Merge Request and related Commit IDs. In the current version of Gitlab's API, this operation requires one API call per Merge Request, so setting this to True can slow down considerably the end-to-end extraction time. For example, in a project like `gitlab-org/gitlab-foss`, this would result to 15x more API calls than required for fetching all the other Entities supported by `tap-gitlab`.
+    If `ultimate_license` is true (defaults to false), then the GitLab account used has access to the GitLab Ultimate or GitLab.com Gold features. It will enable fetching Epics, Epic Issues and other entities available for GitLab Ultimate and GitLab.com Gold accounts.
+
+    If `fetch_merge_request_commits` is true (defaults to false), then for each Merge Request, also fetch the MR's commits and create the join table `merge_request_commits` with the Merge Request and related Commit IDs. In the current version of GitLab's API, this operation requires one API call per Merge Request, so setting this to True can slow down considerably the end-to-end extraction time. For example, in a project like `gitlab-org/gitlab-foss`, this would result to 15x more API calls than required for fetching all the other Entities supported by `tap-gitlab`.
 
 4. [Optional] Create the initial state file
 
