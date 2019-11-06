@@ -586,6 +586,9 @@ def main_impl():
     CONFIG['ultimate_license'] = truthy(CONFIG['ultimate_license'])
     CONFIG['fetch_merge_request_commits'] = truthy(CONFIG['fetch_merge_request_commits'])
 
+    if '/api/' not in CONFIG['api_url']:
+        CONFIG['api_url'] += '/api/v4'
+
     if args.state:
         STATE.update(args.state)
 

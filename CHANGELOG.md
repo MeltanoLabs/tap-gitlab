@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.9.3
+  * [#16](https://gitlab.com/meltano/tap-gitlab/issues/17) Remove requirement to have the api version hard-coded on the `api_url` parameter. The `api_url` now requires only the base URL of the GitLab instance, e.g. `https://gitlab.com`. Old configuration settings or manually setting the version are still supported.
+
 ## 0.9.2
   * [#16](https://gitlab.com/meltano/tap-gitlab/issues/16) Handle 401 (Unauthorized), 403 (Forbidden) and 404 (Not Found) Resource errors gracefully: Skip extracting that resource and continue with the rest. That can happen, for example, when accessing a private project or accessing the members, milestones or labels of a project without sufficient privileges. 
 
