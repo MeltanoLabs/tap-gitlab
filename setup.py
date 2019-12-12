@@ -3,7 +3,7 @@
 from setuptools import setup
 
 setup(name='tap-gitlab',
-      version='0.9.3',
+      version='0.9.4',
       description='Singer.io tap for extracting data from the GitLab API',
       author='Meltano Team && Stitch',
       url='https://singer.io',
