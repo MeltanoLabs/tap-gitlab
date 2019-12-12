@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.9.4
+  * [#21](https://gitlab.com/meltano/tap-gitlab/issues/21) Stop Tap's execution with an error if a request for a resource returns an HTTP 404 response. That means that the resource (e.g. a group or a project) is not there and most probably indicates a user error with setting up `tap-gitlab`
+
 ## 0.9.3
   * [#16](https://gitlab.com/meltano/tap-gitlab/issues/17) Remove requirement to have the api version hard-coded on the `api_url` parameter. The `api_url` now requires only the base URL of the GitLab instance, e.g. `https://gitlab.com`. Old configuration settings or manually setting the version are still supported.
 

@@ -173,7 +173,7 @@ def request(url, params=None):
     LOGGER.info("GET {}".format(req.url))
     resp = SESSION.send(req)
 
-    if resp.status_code in [401, 403, 404]:
+    if resp.status_code in [401, 403]:
         LOGGER.info("Skipping request to {}".format(req.url))
         LOGGER.info("Reason: {} - {}".format(resp.status_code, resp.content))
         raise ResourceInaccessible
