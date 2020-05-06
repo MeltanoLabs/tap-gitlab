@@ -478,10 +478,11 @@ def sync_group(gid, pids):
         #  Get all the projects of the group if none are provided
         for project in group['projects']:
             if project['id']:
-                pids.append(project['id'])
-
-    for pid in pids:
-        sync_project(pid)
+                sync_project(project['id'])
+    else:
+        # Sync only specific projects of the group, if explicit projects are provided
+        for pid in [str(project['id']) for project in group['projects'] if str(project['id']) in pids]:
+            sync_project(pid)
 
     sync_milestones(group, "group")
 
