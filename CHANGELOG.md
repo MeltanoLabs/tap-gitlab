@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.9.5
+  * [!22](https://gitlab.com/meltano/tap-gitlab/-/merge_requests/22) Fix bug causing only projects in first group to be synced if multiple groups are specified ([Tomasz Zbrozek](https://gitlab.com/tomekzbrozek))
+
 ## 0.9.4
   * [#21](https://gitlab.com/meltano/tap-gitlab/issues/21) Stop Tap's execution with an error if a request for a resource returns an HTTP 404 response. That means that the resource (e.g. a group or a project) is not there and most probably indicates a user error with setting up `tap-gitlab`
 
