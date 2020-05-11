@@ -1,0 +1,28 @@
+{
+    "type": "object",
+    "properties": {
+        "id": {
+            "type": "integer"
+        },
+        "status": {
+            "type": "string"
+        },
+        "ref": {
+            "type": ["null", "string"]
+        },
+        "sha": {
+            "type": "string"
+        },
+        "web_url": {
+            "type": "string"
+        },
+        "created_at": {
+            "type": "string",
+            "format": "date-time"
+        },
+        "updated_at": {
+            "type": "string",
+            "format": "date-time"
+        }
+    }
+}

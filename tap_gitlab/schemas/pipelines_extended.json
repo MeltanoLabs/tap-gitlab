@@ -1,0 +1,110 @@
+{
+    "type": "object",
+    "properties": {
+        "project_id": {
+            "type": "integer"
+        },
+        "id": {
+            "type": "integer"
+        },
+        "status": {
+            "type": "string"
+        },
+        "ref": {
+            "type": ["null", "string"]
+        },
+        "sha": {
+            "type": "string"
+        },
+        "before_sha": {
+            "type": "string"
+        },
+        "tag": {
+            "type": "boolean"
+        },
+        "yaml_errors": {
+            "type": ["null", "string"]
+        },
+        "user": {
+            "type": "object",
+            "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "username": {
+                  "type": "string"
+                },
+                "id": {
+                  "type": "integer"
+                },
+                "state": {
+                  "type": "string"
+                }
+            }
+        },
+        "created_at": {
+            "type": "string",
+            "format": "date-time"
+        },
+        "updated_at": {
+            "type": "string",
+            "format": "date-time"
+        },
+        "started_at": {
+            "anyOf": [
+                {
+                    "type": "string",
+                    "format": "date-time"
+                },
+                {
+                    "type": "null"
+                }
+            ]
+        },
+        "finished_at": {
+            "anyOf": [
+                {
+                    "type": "string",
+                    "format": "date-time"
+                },
+                {
+                    "type": "null"
+                }
+            ]
+        },
+        "committed_at": {
+            "anyOf": [
+                {
+                    "type": "string",
+                    "format": "date-time"
+                },
+                {
+                    "type": "null"
+                }
+            ]
+        },
+        "duration": {
+            "anyOf": [
+                {
+                    "type": "integer"
+                },
+                {
+                    "type": "null"
+                }
+            ]
+        },
+        "coverage": {
+            "anyOf": [
+                {
+                    "type": "number"
+                },
+                {
+                    "type": "null"
+                }
+            ]
+        },
+        "web_url": {
+            "type": "string"
+        }
+    }
+}

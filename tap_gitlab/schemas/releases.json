@@ -29,6 +29,17 @@
                     "type": "null"
                 }
             ]
+        },
+        "released_at": {
+            "anyOf": [
+                {
+                    "type": "string",
+                    "format": "date-time"
+                },
+                {
+                    "type": "null"
+                }
+            ]
         }
     }
 }
