@@ -40,7 +40,7 @@ RESOURCES = {
         'key_properties': ['project_id', 'name'],
     },
     'commits': {
-        'url': '/projects/{id}/repository/commits?since={start_date}',
+        'url': '/projects/{id}/repository/commits?since={start_date}&with_stats=true',
         'schema': load_schema('commits'),
         'key_properties': ['id'],
     },
@@ -118,6 +118,16 @@ RESOURCES = {
         'url': '/groups/{id}/epics/{secondary_id}/issues',
         'schema': load_schema('epic_issues'),
         'key_properties': ['group_id', 'epic_iid', 'epic_issue_id'],
+    },
+    'pipelines': {
+        'url': '/projects/{id}/pipelines?updated_after={start_date}',
+        'schema': load_schema('pipelines'),
+        'key_properties': ['id']
+    },
+    'pipelines_extended': {
+        'url': '/projects/{id}/pipelines/{secondary_id}',
+        'schema': load_schema('pipelines_extended'),
+        'key_properties': ['id']
     },
 }
 
@@ -208,8 +218,14 @@ def gen_request(url):
         while next_page:
             params['page'] = int(next_page)
             resp = request(url, params)
-            for row in resp.json():
-                yield row
+            resp_json = resp.json()
+            # handle endpoints that return a single JSON object
+            if isinstance(resp_json, dict):
+                yield resp_json
+            # handle endpoints that return an array of JSON objects
+            else:
+                for row in resp_json:
+                    yield row
             next_page = resp.headers.get('X-Next-Page', None)
     except ResourceInaccessible as exc:
         # Don't halt execution if a Resource is Inaccessible
@@ -495,6 +511,40 @@ def sync_group(gid, pids):
 
     singer.write_record("groups", group, time_extracted=time_extracted)
 
+def sync_pipelines(project):
+    entity = "pipelines"
+    # Keep a state for the pipelines fetched per project
+    state_key = "project_{}_pipelines".format(project['id'])
+    start_date=get_start(state_key)
+
+    url = get_url(entity=entity, id=project['id'], start_date=start_date)
+
+    with Transformer(pre_hook=format_timestamp) as transformer:
+        for row in gen_request(url):
+
+            transformed_row = transformer.transform(row, RESOURCES[entity]["schema"])
+
+            # Write the Pipeline record
+            singer.write_record(entity, transformed_row, time_extracted=utils.now())
+            utils.update_state(STATE, state_key, row['updated_at'])
+
+            # Sync additional details of a pipeline using get-a-single-pipeline endpoint
+            # https://docs.gitlab.com/ee/api/pipelines.html#get-a-single-pipeline
+            if CONFIG['fetch_pipelines_extended']:
+                sync_pipelines_extended(project, transformed_row)
+
+    singer.write_state(STATE)
+
+def sync_pipelines_extended(project, pipeline):
+    entity = "pipelines_extended"
+    url = get_url(entity=entity, id=project['id'], secondary_id=pipeline['id'])
+
+    with Transformer(pre_hook=format_timestamp) as transformer:
+        for row in gen_request(url):
+            row['project_id'] = project['id']
+            transformed_row = transformer.transform(row, RESOURCES["pipelines_extended"]["schema"])
+
+            singer.write_record("pipelines_extended", transformed_row, time_extracted=utils.now())
 
 def sync_project(pid):
     url = get_url(entity="projects", id=pid)
@@ -535,6 +585,7 @@ def sync_project(pid):
         sync_labels(project)
         sync_releases(project)
         sync_tags(project)
+        sync_pipelines(project)
 
         singer.write_record("projects", project, time_extracted=time_extracted)
         utils.update_state(STATE, state_key, last_activity_at)
@@ -586,6 +637,7 @@ def main_impl():
     CONFIG.update(args.config)
     CONFIG['ultimate_license'] = truthy(CONFIG['ultimate_license'])
     CONFIG['fetch_merge_request_commits'] = truthy(CONFIG['fetch_merge_request_commits'])
+    CONFIG['fetch_pipelines_extended'] = truthy(CONFIG['fetch_pipelines_extended'])
 
     if '/api/' not in CONFIG['api_url']:
         CONFIG['api_url'] += '/api/v4'

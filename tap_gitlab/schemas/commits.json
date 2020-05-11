@@ -55,6 +55,20 @@
                     "type": "null"
                 }
             ]
+        },
+        "stats": {
+            "type": "object",
+            "properties": {
+                "additions": {
+                  "type": "integer"
+                },
+                "deletions": {
+                  "type": "integer"
+                },
+                "total": {
+                  "type": "integer"
+                }
+            }
         }
     }
 }

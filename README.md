@@ -29,9 +29,10 @@ This tap:
 
 1. Install
 
-    ```bash
-    > pip install tap-gitlab
-    ```
+Currently this project is not hosted on Python Package Index. To install, run:
+```
+pip install git+https://gitlab.com/meltano/tap-gitlab.git
+```
 
 2. Get your GitLab access token
 
@@ -46,7 +47,7 @@ This tap:
     - API URL for your GitLab account. If you are using the public gitlab.com this will be `https://gitlab.com/api/v3`
     - Groups to track (space separated)    
     - Projects to track (space separated)
-    
+
     Notes on group and project options:
     - either groups or projects need to be provided
     - filling in 'groups' but leaving 'projects' empty will sync all group projects.
@@ -57,11 +58,12 @@ This tap:
     {
       "api_url": "https://gitlab.com",
       "private_token": "your-access-token",
-      "groups": "myorg mygroup", 
+      "groups": "myorg mygroup",
       "projects": "myorg/repo-a myorg/repo-b",
       "start_date": "2018-01-01T00:00:00Z",
       "ultimate_license": true,
-      "fetch_merge_request_commits": false
+      "fetch_merge_request_commits": false,
+      "fetch_pipelines_extended": false
     }
     ```
 
@@ -70,6 +72,8 @@ This tap:
     If `ultimate_license` is true (defaults to false), then the GitLab account used has access to the GitLab Ultimate or GitLab.com Gold features. It will enable fetching Epics, Epic Issues and other entities available for GitLab Ultimate and GitLab.com Gold accounts.
 
     If `fetch_merge_request_commits` is true (defaults to false), then for each Merge Request, also fetch the MR's commits and create the join table `merge_request_commits` with the Merge Request and related Commit IDs. In the current version of GitLab's API, this operation requires one API call per Merge Request, so setting this to True can slow down considerably the end-to-end extraction time. For example, in a project like `gitlab-org/gitlab-foss`, this would result to 15x more API calls than required for fetching all the other Entities supported by `tap-gitlab`.
+
+    If `fetch_pipelines_extended` is true (defaults to false), then for every Pipeline fetched with `sync_pipelines` (which returns N pages containing all pipelines per project), also fetch extended details of each of these pipelines with `sync_pipelines_extended`. Similar concerns as those related to `fetch_merge_request_commits` apply here - every pipeline fetched with `sync_pipelines_extended` requires a separate API call.
 
 4. [Optional] Create the initial state file
 
@@ -85,7 +89,7 @@ This tap:
       "project_278964_commits": "2017-01-17T00:00:00Z"
     }
     ```
-   
+
     Note:
     - You have to provide the id of each project you are syncing. For example, in the case of `gitlab-org/gitlab` it is 278964.
     - You can find the Project ID for a project in the homepage for the project, under its name.

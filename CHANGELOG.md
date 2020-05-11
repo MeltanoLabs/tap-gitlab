@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.9.6
+  [!23](https://gitlab.com/meltano/tap-gitlab/-/merge_requests/23)
+  * Add `pipelines` endpoint (https://docs.gitlab.com/ee/api/pipelines.html#list-project-pipelines)
+  * Add `pipelines_extended` endpoint (https://docs.gitlab.com/ee/api/pipelines.html#get-a-single-pipeline)
+  * Make `gen_request` function handle requests that return a single JSON object, instead of an array of objects
+  * Add `stats__*` columns to `commits` endpoint
+  * Add `released_at` column to `releases` endpoint
+  ([Tomasz Zbrozek](https://gitlab.com/tomekzbrozek))
+
 ## 0.9.5
   * [!22](https://gitlab.com/meltano/tap-gitlab/-/merge_requests/22) Fix bug causing only projects in first group to be synced if multiple groups are specified ([Tomasz Zbrozek](https://gitlab.com/tomekzbrozek))
 
@@ -10,7 +19,7 @@
   * [#16](https://gitlab.com/meltano/tap-gitlab/issues/17) Remove requirement to have the api version hard-coded on the `api_url` parameter. The `api_url` now requires only the base URL of the GitLab instance, e.g. `https://gitlab.com`. Old configuration settings or manually setting the version are still supported.
 
 ## 0.9.2
-  * [#16](https://gitlab.com/meltano/tap-gitlab/issues/16) Handle 401 (Unauthorized), 403 (Forbidden) and 404 (Not Found) Resource errors gracefully: Skip extracting that resource and continue with the rest. That can happen, for example, when accessing a private project or accessing the members, milestones or labels of a project without sufficient privileges. 
+  * [#16](https://gitlab.com/meltano/tap-gitlab/issues/16) Handle 401 (Unauthorized), 403 (Forbidden) and 404 (Not Found) Resource errors gracefully: Skip extracting that resource and continue with the rest. That can happen, for example, when accessing a private project or accessing the members, milestones or labels of a project without sufficient privileges.
 
 ## 0.9.1
   * Update Issues to also fetch the closed_by_id attribute.
@@ -24,7 +33,7 @@
 
 ## 0.8.0
   * Add support for incremental extraction of Commits, Issues, Merge Requests and Epics.
-  * Properly use STATE and the `start_date` to only fetch entities created/updated after that date. 
+  * Properly use STATE and the `start_date` to only fetch entities created/updated after that date.
     (tap-gitlab was fetching everything and filtering the results afterwards, which resulted in huge overhead for large projects)
   * Add dedicated STATE for commits, issues and merge_requests per Project and for epics per Group.
   * Ensure that the last message emitted is the final STATE.
@@ -34,7 +43,7 @@
   * Fix the pagination not working for very large projects with more than 10,000 entities per response.
   * Use the `X-Next-Page` header instead of the `X-Total-Pages` header.
     https://docs.gitlab.com/ee/api/#other-pagination-headers
-  * Use the `per_page` param to fetch 100 records per call instead of 20. 
+  * Use the `per_page` param to fetch 100 records per call instead of 20.
     No more need for 5K calls to fetch all the gitlab-ce commits. A win for all.
   * Explicitly set the per_page param to 20 for labels API end points until gitlab-org/gitlab-ce#63103 is fixed.
 
@@ -58,7 +67,7 @@
   * Add support for fetching Tags and Releases
   * Add support for fetching Merge Requests
   * Add support for fetching Group and Project Members
-  * Update Users with Member info 
+  * Update Users with Member info
   * Fetch additional {'default', 'can_push'} attributes for Branches
   * Fetch additional {'authored_date', 'committed_date', 'parent_ids'} attributes for Commits
   * Fetch additional {'upvotes', 'downvotes', 'merge_requests_count' 'weight'} attributes for Issues
