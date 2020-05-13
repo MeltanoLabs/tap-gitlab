@@ -18,7 +18,8 @@ CONFIG = {
     'start_date': None,
     'groups': '',
     'ultimate_license': False,
-    'fetch_merge_request_commits': False
+    'fetch_merge_request_commits': False,
+    'fetch_pipelines_extended': False
 }
 STATE = {}
 
