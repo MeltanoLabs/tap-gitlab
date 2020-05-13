@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.9.7
+  * [#24](https://gitlab.com/meltano/tap-gitlab/-/issues/24) Set a default value for `fetch_pipeline_extended`
+
 ## 0.9.6
   [!23](https://gitlab.com/meltano/tap-gitlab/-/merge_requests/23)
   * Add `pipelines` endpoint (https://docs.gitlab.com/ee/api/pipelines.html#list-project-pipelines)
