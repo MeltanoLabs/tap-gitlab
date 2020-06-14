@@ -498,8 +498,9 @@ def sync_group(gid, pids):
                 sync_project(project['id'])
     else:
         # Sync only specific projects of the group, if explicit projects are provided
-        for pid in [str(project['id']) for project in group['projects'] if str(project['id']) in pids]:
-            sync_project(pid)
+        for pid in pids:
+            if pid.startswith(group['full_path'] + '/') or pid in [str(p['id']) for p in group['projects']]:
+                sync_project(pid)
 
     sync_milestones(group, "group")
 

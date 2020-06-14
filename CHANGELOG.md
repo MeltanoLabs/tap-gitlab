@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.9.8
+  * [#26](https://gitlab.com/meltano/tap-gitlab/-/issues/26) Fix bug that caused projects not to be synced when group(s) were provided along with project path(s) instead of project ID(s)
+
 ## 0.9.7
   * [#24](https://gitlab.com/meltano/tap-gitlab/-/issues/24) Set a default value for `fetch_pipeline_extended`
 
