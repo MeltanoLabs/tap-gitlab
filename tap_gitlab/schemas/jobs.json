@@ -1,0 +1,115 @@
+{
+    "type": "object",
+    "properties": {
+        "id": {
+            "type": "integer"
+        },
+        "project_id": {
+            "type": "integer"
+        },
+        "user_id": {
+            "type": ["null", "integer"]
+        },
+        "commit_id": {
+            "type": ["null", "string"]
+        },
+        "pipeline_id": {
+            "type": "integer"
+        },
+        "runner_id": {
+            "type": ["null", "integer"]
+        },
+        "name": {
+            "type": "string"
+        },
+        "stage": {
+            "type": "string"
+        },
+        "ref": {
+            "type": "string"
+        },
+        "status": {
+            "type": ["string"],
+            "enum": [
+                "created",
+                "waiting_for_resource",
+                "pending",
+                "running",
+                "failed",
+                "success",
+                "canceled",
+                "skipped",
+                "manual"
+            ]
+        },
+        "duration": {
+            "anyOf": [
+                {
+                    "type": "number",
+                    "format": "float"
+                },
+                {
+                    "type": "null"
+                }
+            ]
+        },
+        "coverage": {
+            "anyOf": [
+                {
+                    "type": "number",
+                    "format": "float"
+                },
+                {
+                    "type": "null"
+                }
+            ]
+        },
+        "allow_failure": {
+            "type": "boolean"
+        },
+        "created_at": {
+            "anyOf": [
+                {
+                    "type": "string",
+                    "format": "date-time"
+                },
+                {
+                    "type": "null"
+                }
+            ]
+        },
+        "started_at": {
+            "anyOf": [
+                {
+                    "type": "string",
+                    "format": "date-time"
+                },
+                {
+                    "type": "null"
+                }
+            ]
+        },
+        "finished_at": {
+            "anyOf": [
+                {
+                    "type": "string",
+                    "format": "date-time"
+                },
+                {
+                    "type": "null"
+                }
+            ]
+        },
+        "artifacts_expire_at": {
+            "anyOf": [
+                {
+                    "type": "string",
+                    "format": "date-time"
+                },
+                {
+                    "type": "null"
+                }
+            ]
+        }
+    }
+}
