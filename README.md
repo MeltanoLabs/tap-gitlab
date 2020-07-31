@@ -8,6 +8,8 @@ This tap:
   - [Branches](https://docs.gitlab.com/ee/api/branches.html)
   - [Commits](https://docs.gitlab.com/ee/api/commits.html)
   - [Issues](https://docs.gitlab.com/ee/api/issues.html)
+  - [Pipelines](https://docs.gitlab.com/ee/api/pipelines.html)
+  - [Jobs](https://docs.gitlab.com/ee/api/jobs.html)
   - [Projects](https://docs.gitlab.com/ee/api/projects.html)
   - [Project milestones](https://docs.gitlab.com/ee/api/milestones.html)
   - [Project Merge Requests](https://docs.gitlab.com/ee/api/merge_requests.html)

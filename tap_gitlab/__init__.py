@@ -10,6 +10,7 @@ from singer import Transformer, utils
 import pytz
 import backoff
 from strict_rfc3339 import rfc3339_to_timestamp
+from dateutil.parser import parse as parse_datetime
 
 PER_PAGE_MAX = 100
 CONFIG = {
@@ -49,6 +50,11 @@ RESOURCES = {
         'url': '/projects/{id}/issues?scope=all&updated_after={start_date}',
         'schema': load_schema('issues'),
         'key_properties': ['id'],
+    },
+    'jobs': {
+        'url': '/projects/{id}/jobs',
+        'schema': load_schema('jobs'),
+        'key_properties': ['id']
     },
     'merge_requests': {
         'url': '/projects/{id}/merge_requests?scope=all&updated_after={start_date}',
@@ -311,6 +317,49 @@ def sync_issues(project):
 
             singer.write_record(entity, transformed_row, time_extracted=utils.now())
             utils.update_state(STATE, state_key, row['updated_at'])
+
+    singer.write_state(STATE)
+
+def sync_jobs(project):
+    entity = "jobs"
+    # Keep a state for the jobs fetched per project
+    state_key = "project_{}_jobs".format(project['id'])
+    # The Jobs API doesn't support filtering by ID or time, it simply returns
+    # jobs by ID descending. To avoid fetching the entire job history every time,
+    # we assume jobs don't change after they complete, so we store the highest
+    # job created_at after which there are only jobs in a terminal state, up to
+    # the start_date.
+    start_date = get_start(state_key)
+    if start_date:
+        start_at = parse_datetime(start_date).astimezone(tz=pytz.UTC).timestamp()
+    else:
+        start_at = 0
+    TERMINAL_JOB_STATUSES = ['failed', 'success', 'canceled', 'skipped', 'manual']
+    terminal_created_at = start_at
+
+    url = get_url(entity=entity, id=project['id'])
+    with Transformer(pre_hook=format_timestamp) as transformer:
+        for row in gen_request(url):
+            row['project_id'] = project['id']
+            flatten_id(row, 'user')
+            flatten_id(row, 'commit')
+            flatten_id(row, 'pipeline')
+            flatten_id(row, 'runner')
+
+            created_at = rfc3339_to_timestamp(row['created_at'])
+            if created_at < start_at:
+                break
+
+            transformed_row = transformer.transform(row, RESOURCES[entity]['schema'])
+            singer.write_record(entity, transformed_row, time_extracted=utils.now())
+
+            if row['status'] not in TERMINAL_JOB_STATUSES:
+                terminal_created_at = start_at
+            elif terminal_created_at < created_at:
+                terminal_created_at = created_at
+
+    new_start = datetime.datetime.utcfromtimestamp(terminal_created_at).replace(tzinfo=pytz.UTC)
+    utils.update_state(STATE, state_key, new_start)
 
     singer.write_state(STATE)
 
@@ -580,6 +629,7 @@ def sync_project(pid):
         sync_members(project)
         sync_users(project)
         sync_issues(project)
+        sync_jobs(project)
         sync_merge_requests(project)
         sync_commits(project)
         sync_branches(project)
