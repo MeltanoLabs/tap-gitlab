@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.9.9
+  * [#28](https://gitlab.com/meltano/tap-gitlab/-/issues/28) Add `jobs` resource
+
 ## 0.9.8
   * [#26](https://gitlab.com/meltano/tap-gitlab/-/issues/26) Fix bug that caused projects not to be synced when group(s) were provided along with project path(s) instead of project ID(s)
 
