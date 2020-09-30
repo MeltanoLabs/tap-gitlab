@@ -2,6 +2,8 @@
 
 This is a [Singer](https://singer.io) tap that produces JSON-formatted data following the [Singer spec](https://github.com/singer-io/getting-started/blob/master/SPEC.md).
 
+It is based on v0.5.1 of <https://github.com/singer-io/tap-gitlab>, but contains [many additional improvements](./CHANGELOG.md).
+
 This tap:
 - Pulls raw data from GitLab's [REST API](https://docs.gitlab.com/ee/api/README.html)
 - Extracts the following resources from GitLab:
