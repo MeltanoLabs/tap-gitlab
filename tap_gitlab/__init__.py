@@ -169,7 +169,7 @@ def get_url(entity, id, secondary_id=None, start_date=None):
 
 
 def get_start(entity):
-    if entity not in STATE:
+    if entity not in STATE or parse_datetime(STATE[entity]) < parse_datetime(CONFIG['start_date']):
         STATE[entity] = CONFIG['start_date']
     return STATE[entity]
 
