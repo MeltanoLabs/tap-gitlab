@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.9.10
+  * [#31](https://gitlab.com/meltano/tap-gitlab/-/issues/31) `start_date` takes precedence over state timestamp when it is more recent
+
 ## 0.9.9
   * [#28](https://gitlab.com/meltano/tap-gitlab/-/issues/28) Add `jobs` resource
 
