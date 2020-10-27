@@ -48,7 +48,7 @@ pip install git+https://gitlab.com/meltano/tap-gitlab.git
 
     Create a JSON file called `config.json` containing:
     - Access token you just created
-    - API URL for your GitLab account. If you are using the public gitlab.com this will be `https://gitlab.com/api/v3`
+    - API URL for your GitLab account. If you are using the public gitlab.com this will be `https://gitlab.com/api/v4`
     - Groups to track (space separated)    
     - Projects to track (space separated)
 
