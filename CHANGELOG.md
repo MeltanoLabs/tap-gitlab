@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.9.11
+  * [#33](https://gitlab.com/meltano/tap-gitlab/-/issues/33) Fix support for `start_date`s without a timestamp or timezone by assuming UTC
+
 ## 0.9.10
   * [#31](https://gitlab.com/meltano/tap-gitlab/-/issues/31) `start_date` takes precedence over state timestamp when it is more recent
 
