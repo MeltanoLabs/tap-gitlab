@@ -10,7 +10,7 @@ from singer import Transformer, utils
 import pytz
 import backoff
 from strict_rfc3339 import rfc3339_to_timestamp
-from dateutil.parser import parse as parse_datetime
+from dateutil.parser import isoparse
 
 PER_PAGE_MAX = 100
 CONFIG = {
@@ -23,6 +23,12 @@ CONFIG = {
     'fetch_pipelines_extended': False
 }
 STATE = {}
+
+def parse_datetime(datetime_str):
+    dt = isoparse(datetime_str)
+    if not dt.tzinfo:
+        dt = dt.replace(tzinfo=pytz.UTC)
+    return dt
 
 def get_abs_path(path):
     return os.path.join(os.path.dirname(os.path.realpath(__file__)), path)
