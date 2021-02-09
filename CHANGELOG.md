@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.9.12
+  * [#25](https://gitlab.com/meltano/tap-gitlab/-/issues/25) Implement discovery mode and stream/field selection
+
 ## 0.9.11
   * [#33](https://gitlab.com/meltano/tap-gitlab/-/issues/33) Fix support for `start_date`s without a timestamp or timezone by assuming UTC
 
