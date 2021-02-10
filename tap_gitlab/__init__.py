@@ -781,7 +781,7 @@ def sync_project(pid):
         utils.update_state(STATE, state_key, last_activity_at)
         singer.write_state(STATE)
 
-def do_discover():
+def do_discover(select_all=False):
     streams = []
     for resource, config in RESOURCES.items():
         mdata = metadata.get_standard_metadata(
@@ -791,14 +791,16 @@ def do_discover():
             replication_method=config["replication_method"],
         )
 
-        mdata = metadata.to_list(metadata.write(metadata.to_map(mdata), (), 'selected', True))
-
         if (
             resource in ULTIMATE_RESOURCES and not CONFIG["ultimate_license"]
         ) or (
             resource in STREAM_CONFIG_SWITCHES and not CONFIG["fetch_{}".format(resource)]
         ):
             mdata = metadata.to_list(metadata.write(metadata.to_map(mdata), (), 'inclusion', 'unsupported'))
+        elif select_all:
+            # If a catalog was unsupplied, we want to select all streams by default. This diverges
+            # slightly from Singer recommended behavior but is necessary for backwards compatibility
+            mdata = metadata.to_list(metadata.write(metadata.to_map(mdata), (), 'selected', True))
 
         streams.append(
             CatalogEntry(
@@ -872,7 +874,7 @@ def main_impl():
         if args.catalog:
             CATALOG = args.catalog
         else:
-            CATALOG = do_discover()
+            CATALOG = do_discover(select_all=True)
         do_sync()
 
 
