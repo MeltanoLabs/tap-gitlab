@@ -2,13 +2,13 @@
     "type": "object",
     "properties": {
         "id": {
-            "type": "integer"
+            "type": ["null", "integer"]
         },
         "group_id": {
-            "type": "integer"
+            "type": ["null", "integer"]
         },
         "user_id": {
-            "type": "integer"
+            "type": ["null", "integer"]
         },
         "name": {
             "type": ["null", "string"]
@@ -23,8 +23,7 @@
             "type": ["null", "string"]
         },
         "state": {
-            "type": "string"
+            "type": ["null", "string"]
         }
     }
 }
-

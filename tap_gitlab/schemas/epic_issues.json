@@ -2,19 +2,19 @@
     "type": "object",
     "properties": {
         "group_id": {
-            "type": "integer"
+            "type": ["null", "integer"]
         },
         "epic_iid": {
-            "type": "integer"
+            "type": ["null", "integer"]
         },
         "epic_issue_id": {
-            "type": "integer"
+            "type": ["null", "integer"]
         },
         "issue_id": {
-            "type": "integer"
+            "type": ["null", "integer"]
         },
         "issue_iid": {
-            "type": "integer"
+            "type": ["null", "integer"]
         },
         "project_id": {
             "type": ["null", "integer"]

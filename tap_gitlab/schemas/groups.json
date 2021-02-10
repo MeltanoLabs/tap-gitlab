@@ -42,7 +42,7 @@
                         "type": "object",
                         "properties": {
                             "id": {
-                                "type": "integer"
+                                "type": ["null", "integer"]
                             }
                         }
                     }

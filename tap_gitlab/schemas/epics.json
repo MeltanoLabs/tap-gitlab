@@ -2,13 +2,13 @@
     "type": "object",
     "properties": {
         "id": {
-            "type": "integer"
+            "type": ["null", "integer"]
         },
         "iid": {
-            "type": "integer"
+            "type": ["null", "integer"]
         },
         "group_id": {
-            "type": "integer"
+            "type": ["null", "integer"]
         },
         "parent_id": {
             "type": ["null", "integer"]
@@ -59,7 +59,7 @@
         "labels": {
             "type": "array",
             "items": {
-                "type": "string"
+                "type": ["null", "string"]
             }
         },
         "upvotes": {

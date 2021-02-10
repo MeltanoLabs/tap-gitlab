@@ -2,27 +2,41 @@
     "type": "object",
     "properties": {
         "id": {
-            "type": "integer"
+            "type": ["null", "integer"]
         },
         "status": {
-            "type": "string"
+            "type": ["null", "string"]
         },
         "ref": {
             "type": ["null", "string"]
         },
         "sha": {
-            "type": "string"
+            "type": ["null", "string"]
         },
         "web_url": {
-            "type": "string"
+            "type": ["null", "string"]
         },
         "created_at": {
-            "type": "string",
-            "format": "date-time"
+            "anyOf": [
+                {
+                    "type": "string",
+                    "format": "date-time"
+                },
+                {
+                    "type": "null"
+                }
+            ]
         },
         "updated_at": {
-            "type": "string",
-            "format": "date-time"
+            "anyOf": [
+                {
+                    "type": "string",
+                    "format": "date-time"
+                },
+                {
+                    "type": "null"
+                }
+            ]
         }
     }
 }
