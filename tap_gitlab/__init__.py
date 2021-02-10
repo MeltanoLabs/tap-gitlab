@@ -791,6 +791,8 @@ def do_discover():
             replication_method=config["replication_method"],
         )
 
+        mdata = metadata.to_list(metadata.write(metadata.to_map(mdata), (), 'selected', True))
+
         if (
             resource in ULTIMATE_RESOURCES and not CONFIG["ultimate_license"]
         ) or (
