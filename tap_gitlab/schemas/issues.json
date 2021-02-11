@@ -2,13 +2,13 @@
     "type": "object",
     "properties": {
         "project_id": {
-            "type": "integer"
+            "type": ["null", "integer"]
         },
         "id": {
-            "type": "integer"
+            "type": ["null", "integer"]
         },
         "iid": {
-            "type": "integer"
+            "type": ["null", "integer"]
         },
         "milestone_id": {
             "type": ["null", "integer"]
@@ -22,7 +22,7 @@
         "assignees": {
             "type": "array",
             "items": {
-                "type": "integer"
+                "type": ["null", "integer"]
             }
         },
         "closed_by_id": {
@@ -40,7 +40,7 @@
         "labels": {
             "type": "array",
             "items": {
-                "type": "string"
+                "type": ["null", "string"]
             }
         },
         "created_at": {

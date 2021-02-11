@@ -2,16 +2,16 @@
     "type": "object",
     "properties": {
         "project_id": {
-            "type": "integer"
+            "type": ["null", "integer"]
         },
         "merge_request_iid": {
-            "type": "integer"
+            "type": ["null", "integer"]
         },
         "commit_id": {
-            "type": "string"
+            "type": ["null", "string"]
         },
         "commit_short_id": {
-            "type": "string"
+            "type": ["null", "string"]
         }
     }
 }

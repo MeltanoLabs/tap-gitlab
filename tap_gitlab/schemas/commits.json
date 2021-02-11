@@ -2,13 +2,13 @@
     "type": "object",
     "properties": {
         "id": {
-            "type": "string"
+            "type": ["null", "string"]
         },
         "project_id": {
-            "type": "integer"
+            "type": ["null", "integer"]
         },
         "short_id": {
-            "type": "string"
+            "type": ["null", "string"]
         },
         "title": {
             "type": ["null", "string"]
@@ -20,8 +20,15 @@
             "type": ["null", "string"]
         },
         "authored_date": {
-            "type": "string",
-            "format": "date-time"
+            "anyOf": [
+                {
+                    "type": "string",
+                    "format": "date-time"
+                },
+                {
+                    "type": "null"
+                }
+            ]
         },
         "committer_name": {
             "type": ["null", "string"]
@@ -30,12 +37,26 @@
             "type": ["null", "string"]
         },
         "committed_date": {
-            "type": "string",
-            "format": "date-time"
+            "anyOf": [
+                {
+                    "type": "string",
+                    "format": "date-time"
+                },
+                {
+                    "type": "null"
+                }
+            ]
         },
         "created_at": {
-            "type": "string",
-            "format": "date-time"
+            "anyOf": [
+                {
+                    "type": "string",
+                    "format": "date-time"
+                },
+                {
+                    "type": "null"
+                }
+            ]
         },
         "message": {
             "type": ["null", "string"]
@@ -48,7 +69,7 @@
                 {
                     "type": "array",
                     "items": {
-                        "type": "string"
+                        "type": ["null", "string"]
                     }
                 },
                 {
@@ -60,13 +81,13 @@
             "type": "object",
             "properties": {
                 "additions": {
-                  "type": "integer"
+                  "type": ["null", "integer"]
                 },
                 "deletions": {
-                  "type": "integer"
+                  "type": ["null", "integer"]
                 },
                 "total": {
-                  "type": "integer"
+                  "type": ["null", "integer"]
                 }
             }
         }

@@ -2,13 +2,13 @@
     "type": "object",
     "properties": {
         "id": {
-            "type": "integer"
+            "type": ["null", "integer"]
         },
         "iid": {
-            "type": "integer"
+            "type": ["null", "integer"]
         },
         "project_id": {
-            "type": "integer"
+            "type": ["null", "integer"]
         },
         "milestone_id": {
             "type": ["null", "integer"]
@@ -22,7 +22,7 @@
         "assignees": {
             "type": "array",
             "items": {
-                "type": "integer"
+                "type": ["null", "integer"]
             }
         },        
         "merged_by_id": {
@@ -32,12 +32,26 @@
             "type": ["null", "integer"]
         },
         "created_at": {
-            "type": "string",
-            "format": "date-time"
+            "anyOf": [
+                {
+                    "type": "string",
+                    "format": "date-time"
+                },
+                {
+                    "type": "null"
+                }
+            ]
         },
         "updated_at": {
-            "type": "string",
-            "format": "date-time"
+            "anyOf": [
+                {
+                    "type": "string",
+                    "format": "date-time"
+                },
+                {
+                    "type": "null"
+                }
+            ]
         },
         "merged_at": {
             "anyOf": [
@@ -91,7 +105,7 @@
         "labels": {
             "type": "array",
             "items": {
-                "type": "string"
+                "type": ["null", "string"]
             }
         },
         "work_in_progress": {

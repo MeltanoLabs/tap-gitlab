@@ -176,13 +176,13 @@
                         "type": "object",
                         "properties": {
                             "group_id": {
-                                "type": "integer"
+                                "type": ["null", "integer"]
                             },
                             "group_name": {
-                                "type": "string"
+                                "type": ["null", "string"]
                             },
                             "group_access_level": {
-                                "type": "integer"
+                                "type": ["null", "integer"]
                             }
                         }
                     }
@@ -226,7 +226,7 @@
                 {
                     "type": "array",
                     "items": {
-                        "type": "string"
+                        "type": ["null", "string"]
                     }
                 },
                 {

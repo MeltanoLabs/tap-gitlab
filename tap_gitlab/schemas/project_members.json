@@ -2,13 +2,13 @@
     "type": "object",
     "properties": {
         "id": {
-            "type": "integer"
+            "type": ["null", "integer"]
         },
         "project_id": {
-            "type": "integer"
+            "type": ["null", "integer"]
         },
         "user_id": {
-            "type": "integer"
+            "type": ["null", "integer"]
         },
         "access_level": {
             "type": ["null", "integer"]

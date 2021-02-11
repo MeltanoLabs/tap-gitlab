@@ -5,7 +5,9 @@ import sys
 import os
 import requests
 import singer
-from singer import Transformer, utils
+from singer import Transformer, utils, metadata
+from singer.catalog import Catalog, CatalogEntry
+from singer.schema import Schema
 
 import pytz
 import backoff
@@ -23,6 +25,7 @@ CONFIG = {
     'fetch_pipelines_extended': False
 }
 STATE = {}
+CATALOG = None
 
 def parse_datetime(datetime_str):
     dt = isoparse(datetime_str)
@@ -41,110 +44,139 @@ RESOURCES = {
         'url': '/projects/{id}?statistics=1',
         'schema': load_schema('projects'),
         'key_properties': ['id'],
+        'replication_method': 'INCREMENTAL',
+        'replication_keys': ['last_activity_at'],
     },
     'branches': {
         'url': '/projects/{id}/repository/branches',
         'schema': load_schema('branches'),
         'key_properties': ['project_id', 'name'],
+        'replication_method': 'FULL_TABLE',
     },
     'commits': {
         'url': '/projects/{id}/repository/commits?since={start_date}&with_stats=true',
         'schema': load_schema('commits'),
         'key_properties': ['id'],
+        'replication_method': 'INCREMENTAL',
+        'replication_keys': ['created_at'],
     },
     'issues': {
         'url': '/projects/{id}/issues?scope=all&updated_after={start_date}',
         'schema': load_schema('issues'),
         'key_properties': ['id'],
+        'replication_method': 'INCREMENTAL',
+        'replication_keys': ['updated_at'],
     },
     'jobs': {
         'url': '/projects/{id}/jobs',
         'schema': load_schema('jobs'),
-        'key_properties': ['id']
+        'key_properties': ['id'],
+        'replication_method': 'FULL_TABLE',
     },
     'merge_requests': {
         'url': '/projects/{id}/merge_requests?scope=all&updated_after={start_date}',
         'schema': load_schema('merge_requests'),
         'key_properties': ['id'],
+        'replication_method': 'INCREMENTAL',
+        'replication_keys': ['updated_at'],
     },
     'merge_request_commits': {
         'url': '/projects/{id}/merge_requests/{secondary_id}/commits',
         'schema': load_schema('merge_request_commits'),
         'key_properties': ['project_id', 'merge_request_iid', 'commit_id'],
+        'replication_method': 'FULL_TABLE',
     },
     'project_milestones': {
         'url': '/projects/{id}/milestones',
         'schema': load_schema('milestones'),
         'key_properties': ['id'],
+        'replication_method': 'FULL_TABLE',
     },
     'group_milestones': {
         'url': '/groups/{id}/milestones',
         'schema': load_schema('milestones'),
         'key_properties': ['id'],
+        'replication_method': 'FULL_TABLE',
     },
     'users': {
         'url': '/projects/{id}/users',
         'schema': load_schema('users'),
         'key_properties': ['id'],
+        'replication_method': 'FULL_TABLE',
     },
     'groups': {
         'url': '/groups/{id}',
         'schema': load_schema('groups'),
         'key_properties': ['id'],
+        'replication_method': 'FULL_TABLE',
     },
     'project_members': {
         'url': '/projects/{id}/members',
         'schema': load_schema('project_members'),
         'key_properties': ['project_id', 'id'],
+        'replication_method': 'FULL_TABLE',
     },
     'group_members': {
         'url': '/groups/{id}/members',
         'schema': load_schema('group_members'),
         'key_properties': ['group_id', 'id'],
+        'replication_method': 'FULL_TABLE',
     },
     'releases': {
         'url': '/projects/{id}/releases',
         'schema': load_schema('releases'),
         'key_properties': ['project_id', 'commit_id', 'tag_name'],
+        'replication_method': 'FULL_TABLE',
     },
     'tags': {
         'url': '/projects/{id}/repository/tags',
         'schema': load_schema('tags'),
         'key_properties': ['project_id', 'commit_id', 'name'],
+        'replication_method': 'FULL_TABLE',
     },
     'project_labels': {
         'url': '/projects/{id}/labels',
         'schema': load_schema('project_labels'),
         'key_properties': ['project_id', 'id'],
+        'replication_method': 'FULL_TABLE',
     },
     'group_labels': {
         'url': '/groups/{id}/labels',
         'schema': load_schema('group_labels'),
         'key_properties': ['group_id', 'id'],
+        'replication_method': 'FULL_TABLE',
     },
     'epics': {
         'url': '/groups/{id}/epics?updated_after={start_date}',
         'schema': load_schema('epics'),
         'key_properties': ['group_id', 'id'],
+        'replication_method': 'INCREMENTAL',
+        'replication_keys': ['updated_at'],
     },
     'epic_issues': {
         'url': '/groups/{id}/epics/{secondary_id}/issues',
         'schema': load_schema('epic_issues'),
         'key_properties': ['group_id', 'epic_iid', 'epic_issue_id'],
+        'replication_method': 'FULL_TABLE',
     },
     'pipelines': {
         'url': '/projects/{id}/pipelines?updated_after={start_date}',
         'schema': load_schema('pipelines'),
-        'key_properties': ['id']
+        'key_properties': ['id'],
+        'replication_method': 'INCREMENTAL',
+        'replication_keys': ['updated_at'],
     },
     'pipelines_extended': {
         'url': '/projects/{id}/pipelines/{secondary_id}',
         'schema': load_schema('pipelines_extended'),
-        'key_properties': ['id']
+        'key_properties': ['id'],
+        'replication_method': 'FULL_TABLE',
     },
 }
 
 ULTIMATE_RESOURCES = ("epics", "epic_issues")
+STREAM_CONFIG_SWITCHES = ('merge_request_commits', 'pipelines_extended')
+TERMINAL_JOB_STATUSES = ('failed', 'success', 'canceled', 'skipped', 'manual')
 
 LOGGER = singer.get_logger()
 SESSION = requests.Session()
@@ -261,16 +293,27 @@ def flatten_id(item, target):
         item[target + '_id'] = None
 
 def sync_branches(project):
+    entity = "branches"
+    stream = CATALOG.get_stream(entity)
+    mdata = metadata.to_map(stream.metadata)
+    if not stream.is_selected():
+        return
+
     url = get_url(entity="branches", id=project['id'])
     with Transformer(pre_hook=format_timestamp) as transformer:
         for row in gen_request(url):
             row['project_id'] = project['id']
             flatten_id(row, "commit")
-            transformed_row = transformer.transform(row, RESOURCES["branches"]["schema"])
+            transformed_row = transformer.transform(row, RESOURCES["branches"]["schema"], mdata)
             singer.write_record("branches", transformed_row, time_extracted=utils.now())
 
 def sync_commits(project):
     entity = "commits"
+    stream = CATALOG.get_stream(entity)
+    mdata = metadata.to_map(stream.metadata)
+    if not stream.is_selected():
+        return
+
     # Keep a state for the commits fetched per project
     state_key = "project_{}_commits".format(project["id"])
     start_date=get_start(state_key)
@@ -279,7 +322,7 @@ def sync_commits(project):
     with Transformer(pre_hook=format_timestamp) as transformer:
         for row in gen_request(url):
             row['project_id'] = project["id"]
-            transformed_row = transformer.transform(row, RESOURCES[entity]["schema"])
+            transformed_row = transformer.transform(row, RESOURCES[entity]["schema"], mdata)
 
             singer.write_record(entity, transformed_row, time_extracted=utils.now())
             utils.update_state(STATE, state_key, row['created_at'])
@@ -288,6 +331,11 @@ def sync_commits(project):
 
 def sync_issues(project):
     entity = "issues"
+    stream = CATALOG.get_stream(entity)
+    mdata = metadata.to_map(stream.metadata)
+    if not stream.is_selected():
+        return
+
     # Keep a state for the issues fetched per project
     state_key = "project_{}_issues".format(project["id"])
     start_date=get_start(state_key)
@@ -319,7 +367,7 @@ def sync_issues(project):
                 row["human_time_estimate"] = None
                 row["human_total_time_spent"] = None
 
-            transformed_row = transformer.transform(row, RESOURCES[entity]["schema"])
+            transformed_row = transformer.transform(row, RESOURCES[entity]["schema"], mdata)
 
             singer.write_record(entity, transformed_row, time_extracted=utils.now())
             utils.update_state(STATE, state_key, row['updated_at'])
@@ -328,6 +376,11 @@ def sync_issues(project):
 
 def sync_jobs(project):
     entity = "jobs"
+    stream = CATALOG.get_stream(entity)
+    mdata = metadata.to_map(stream.metadata)
+    if not stream.is_selected():
+        return
+
     # Keep a state for the jobs fetched per project
     state_key = "project_{}_jobs".format(project['id'])
     # The Jobs API doesn't support filtering by ID or time, it simply returns
@@ -340,7 +393,6 @@ def sync_jobs(project):
         start_at = parse_datetime(start_date).astimezone(tz=pytz.UTC).timestamp()
     else:
         start_at = 0
-    TERMINAL_JOB_STATUSES = ['failed', 'success', 'canceled', 'skipped', 'manual']
     terminal_created_at = start_at
 
     url = get_url(entity=entity, id=project['id'])
@@ -356,7 +408,7 @@ def sync_jobs(project):
             if created_at < start_at:
                 break
 
-            transformed_row = transformer.transform(row, RESOURCES[entity]['schema'])
+            transformed_row = transformer.transform(row, RESOURCES[entity]['schema'], mdata)
             singer.write_record(entity, transformed_row, time_extracted=utils.now())
 
             if row['status'] not in TERMINAL_JOB_STATUSES:
@@ -371,6 +423,11 @@ def sync_jobs(project):
 
 def sync_merge_requests(project):
     entity = "merge_requests"
+    stream = CATALOG.get_stream(entity)
+    mdata = metadata.to_map(stream.metadata)
+    if not stream.is_selected():
+        return
+
     # Keep a state for the merge requests fetched per project
     state_key = "project_{}_merge_requests".format(project["id"])
     start_date=get_start(state_key)
@@ -403,7 +460,7 @@ def sync_merge_requests(project):
                 row["human_time_estimate"] = None
                 row["human_total_time_spent"] = None
 
-            transformed_row = transformer.transform(row, RESOURCES[entity]["schema"])
+            transformed_row = transformer.transform(row, RESOURCES[entity]["schema"], mdata)
 
             # Write the MR record
             singer.write_record(entity, transformed_row, time_extracted=utils.now())
@@ -417,6 +474,12 @@ def sync_merge_requests(project):
     singer.write_state(STATE)
 
 def sync_merge_request_commits(project, merge_request):
+    entity = "merge_request_commits"
+    stream = CATALOG.get_stream(entity)
+    mdata = metadata.to_map(stream.metadata)
+    if not stream.is_selected():
+        return
+
     url = get_url(entity="merge_request_commits", id=project['id'], secondary_id=merge_request['iid'])
 
     with Transformer(pre_hook=format_timestamp) as transformer:
@@ -425,78 +488,123 @@ def sync_merge_request_commits(project, merge_request):
             row['merge_request_iid'] = merge_request['iid']
             row['commit_id'] = row['id']
             row['commit_short_id'] = row['short_id']
-            transformed_row = transformer.transform(row, RESOURCES["merge_request_commits"]["schema"])
+            transformed_row = transformer.transform(row, RESOURCES["merge_request_commits"]["schema"], mdata)
 
             singer.write_record("merge_request_commits", transformed_row, time_extracted=utils.now())
 
 def sync_releases(project):
+    entity = "releases"
+    stream = CATALOG.get_stream(entity)
+    mdata = metadata.to_map(stream.metadata)
+    if not stream.is_selected():
+        return
+
     url = get_url(entity="releases", id=project['id'])
     with Transformer(pre_hook=format_timestamp) as transformer:
         for row in gen_request(url):
             flatten_id(row, "author")
             flatten_id(row, "commit")
             row['project_id'] = project["id"]
-            transformed_row = transformer.transform(row, RESOURCES["releases"]["schema"])
+            transformed_row = transformer.transform(row, RESOURCES["releases"]["schema"], mdata)
 
             singer.write_record("releases", transformed_row, time_extracted=utils.now())
 
 
 def sync_tags(project):
+    entity = "tags"
+    stream = CATALOG.get_stream(entity)
+    mdata = metadata.to_map(stream.metadata)
+    if not stream.is_selected():
+        return
+
     url = get_url(entity="tags", id=project['id'])
     with Transformer(pre_hook=format_timestamp) as transformer:
         for row in gen_request(url):
             flatten_id(row, "commit")
             row['project_id'] = project["id"]
-            transformed_row = transformer.transform(row, RESOURCES["tags"]["schema"])
+            transformed_row = transformer.transform(row, RESOURCES["tags"]["schema"], mdata)
 
             singer.write_record("tags", transformed_row, time_extracted=utils.now())
 
 
 def sync_milestones(entity, element="project"):
+    stream_name = "{}_milestones".format(element)
+    stream = CATALOG.get_stream(stream_name)
+    mdata = metadata.to_map(stream.metadata)
+    if not stream.is_selected():
+        return
+
     url = get_url(entity=element + "_milestones", id=entity['id'])
 
     with Transformer(pre_hook=format_timestamp) as transformer:
         for row in gen_request(url):
-            transformed_row = transformer.transform(row, RESOURCES[element + "_milestones"]["schema"])
+            transformed_row = transformer.transform(row, RESOURCES[element + "_milestones"]["schema"], mdata)
 
             singer.write_record(element + "_milestones", transformed_row, time_extracted=utils.now())
 
 def sync_users(project):
+    entity = "users"
+    stream = CATALOG.get_stream(entity)
+    mdata = metadata.to_map(stream.metadata)
+    if not stream.is_selected():
+        return
+
     url = get_url(entity="users", id=project['id'])
     project["users"] = []
     with Transformer(pre_hook=format_timestamp) as transformer:
         for row in gen_request(url):
-            transformed_row = transformer.transform(row, RESOURCES["users"]["schema"])
+            transformed_row = transformer.transform(row, RESOURCES["users"]["schema"], mdata)
             project["users"].append(row["id"])
             singer.write_record("users", transformed_row, time_extracted=utils.now())
 
 
 def sync_members(entity, element="project"):
-    url = get_url(entity=element + "_members", id=entity['id'])
+    stream_name = "{}_members".format(element)
+    member_stream = CATALOG.get_stream(stream_name)
+    user_stream = CATALOG.get_stream('users')
+    member_mdata = metadata.to_map(member_stream.metadata)
+    user_mdata = metadata.to_map(user_stream.metadata)
+    if not member_stream.is_selected():
+        return
+
+    url = get_url(entity=stream_name, id=entity['id'])
 
     with Transformer(pre_hook=format_timestamp) as transformer:
         for row in gen_request(url):
             # First, write a record for the user
-            user_row = transformer.transform(row, RESOURCES["users"]["schema"])
-            singer.write_record("users", user_row, time_extracted=utils.now())
+            if user_stream.is_selected():
+                user_row = transformer.transform(row, RESOURCES["users"]["schema"], user_mdata)
+                singer.write_record("users", user_row, time_extracted=utils.now())
 
             # And then a record for the member
             row[element + '_id'] = entity['id']
             row['user_id'] = row['id']
-            member_row = transformer.transform(row, RESOURCES[element + "_members"]["schema"])
+            member_row = transformer.transform(row, RESOURCES[element + "_members"]["schema"], member_mdata)
             singer.write_record(element + "_members", member_row, time_extracted=utils.now())
 
 
 def sync_labels(entity, element="project"):
+    stream_name = "{}_labels".format(element)
+    stream = CATALOG.get_stream(stream_name)
+    mdata = metadata.to_map(stream.metadata)
+    if not stream.is_selected():
+        return
+
     url = get_url(entity=element + "_labels", id=entity['id'])
 
     with Transformer(pre_hook=format_timestamp) as transformer:
         for row in gen_request(url):
             row[element + '_id'] = entity['id']
-            transformed_row = transformer.transform(row, RESOURCES[element + "_labels"]["schema"])
+            transformed_row = transformer.transform(row, RESOURCES[element + "_labels"]["schema"], mdata)
             singer.write_record(element + "_labels", transformed_row, time_extracted=utils.now())
 
 def sync_epic_issues(group, epic):
+    entity = "epic_issues"
+    stream = CATALOG.get_stream(entity)
+    mdata = metadata.to_map(stream.metadata)
+    if not stream.is_selected():
+        return
+
     url = get_url(entity="epic_issues", id=group['id'], secondary_id=epic['iid'])
 
     with Transformer(pre_hook=format_timestamp) as transformer:
@@ -505,12 +613,17 @@ def sync_epic_issues(group, epic):
             row['epic_iid'] = epic['iid']
             row['issue_id'] = row['id']
             row['issue_iid'] = row['iid']
-            transformed_row = transformer.transform(row, RESOURCES["epic_issues"]["schema"])
+            transformed_row = transformer.transform(row, RESOURCES["epic_issues"]["schema"], mdata)
 
             singer.write_record("epic_issues", transformed_row, time_extracted=utils.now())
 
 def sync_epics(group):
     entity = "epics"
+    stream = CATALOG.get_stream(entity)
+    mdata = metadata.to_map(stream.metadata)
+    if not stream.is_selected():
+        return
+
     # Keep a state for the epics fetched per group
     state_key = "group_{}_epics".format(group['id'])
     start_date=get_start(state_key)
@@ -519,7 +632,7 @@ def sync_epics(group):
     with Transformer(pre_hook=format_timestamp) as transformer:
         for row in gen_request(url):
             flatten_id(row, "author")
-            transformed_row = transformer.transform(row, RESOURCES[entity]["schema"])
+            transformed_row = transformer.transform(row, RESOURCES[entity]["schema"], mdata)
 
             # Write the Epic record
             singer.write_record(entity, transformed_row, time_extracted=utils.now())
@@ -532,6 +645,8 @@ def sync_epics(group):
     singer.write_state(STATE)
 
 def sync_group(gid, pids):
+    stream = CATALOG.get_stream("groups")
+    mdata = metadata.to_map(stream.metadata)
     url = get_url(entity="groups", id=gid)
 
     try:
@@ -543,33 +658,40 @@ def sync_group(gid, pids):
 
     time_extracted = utils.now()
 
-    with Transformer(pre_hook=format_timestamp) as transformer:
-        group = transformer.transform(data, RESOURCES["groups"]["schema"])
-
     if not pids:
         #  Get all the projects of the group if none are provided
-        for project in group['projects']:
+        for project in data['projects']:
             if project['id']:
                 sync_project(project['id'])
     else:
         # Sync only specific projects of the group, if explicit projects are provided
         for pid in pids:
-            if pid.startswith(group['full_path'] + '/') or pid in [str(p['id']) for p in group['projects']]:
+            if pid.startswith(data['full_path'] + '/') or pid in [str(p['id']) for p in data['projects']]:
                 sync_project(pid)
 
-    sync_milestones(group, "group")
+    sync_milestones(data, "group")
 
-    sync_members(group, "group")
+    sync_members(data, "group")
 
-    sync_labels(group, "group")
+    sync_labels(data, "group")
 
     if CONFIG['ultimate_license']:
-        sync_epics(group)
+        sync_epics(data)
 
-    singer.write_record("groups", group, time_extracted=time_extracted)
+    if not stream.is_selected():
+        return
+
+    with Transformer(pre_hook=format_timestamp) as transformer:
+        group = transformer.transform(data, RESOURCES["groups"]["schema"], mdata)
+        singer.write_record("groups", group, time_extracted=time_extracted)
 
 def sync_pipelines(project):
     entity = "pipelines"
+    stream = CATALOG.get_stream(entity)
+    if not stream.is_selected():
+        return
+
+    mdata = metadata.to_map(stream.metadata)
     # Keep a state for the pipelines fetched per project
     state_key = "project_{}_pipelines".format(project['id'])
     start_date=get_start(state_key)
@@ -579,7 +701,7 @@ def sync_pipelines(project):
     with Transformer(pre_hook=format_timestamp) as transformer:
         for row in gen_request(url):
 
-            transformed_row = transformer.transform(row, RESOURCES[entity]["schema"])
+            transformed_row = transformer.transform(row, RESOURCES[entity]["schema"], mdata)
 
             # Write the Pipeline record
             singer.write_record(entity, transformed_row, time_extracted=utils.now())
@@ -594,12 +716,17 @@ def sync_pipelines(project):
 
 def sync_pipelines_extended(project, pipeline):
     entity = "pipelines_extended"
+    stream = CATALOG.get_stream(entity)
+    if not stream.is_selected():
+        return
+
+    mdata = metadata.to_map(stream.metadata)
     url = get_url(entity=entity, id=project['id'], secondary_id=pipeline['id'])
 
     with Transformer(pre_hook=format_timestamp) as transformer:
         for row in gen_request(url):
             row['project_id'] = project['id']
-            transformed_row = transformer.transform(row, RESOURCES["pipelines_extended"]["schema"])
+            transformed_row = transformer.transform(row, RESOURCES["pipelines_extended"]["schema"], mdata)
 
             singer.write_record("pipelines_extended", transformed_row, time_extracted=utils.now())
 
@@ -614,41 +741,84 @@ def sync_project(pid):
         return
 
     time_extracted = utils.now()
+    stream = CATALOG.get_stream("projects")
+    mdata = metadata.to_map(stream.metadata)
 
-    with Transformer(pre_hook=format_timestamp) as transformer:
-        flatten_id(data, "owner")
-        project = transformer.transform(data, RESOURCES["projects"]["schema"])
-
-    state_key = "project_{}".format(project["id"])
+    state_key = "project_{}".format(data["id"])
 
     #pylint: disable=maybe-no-member
-    last_activity_at = project.get('last_activity_at', project.get('created_at'))
+    last_activity_at = data.get('last_activity_at', data.get('created_at'))
     if not last_activity_at:
         raise Exception(
             #pylint: disable=line-too-long
             "There is no last_activity_at or created_at field on project {}. This usually means I don't have access to the project."
-            .format(project['id']))
+            .format(data['id']))
 
 
-    if project['last_activity_at'] >= get_start(state_key):
+    if data['last_activity_at'] >= get_start(state_key):
 
-        sync_members(project)
-        sync_users(project)
-        sync_issues(project)
-        sync_jobs(project)
-        sync_merge_requests(project)
-        sync_commits(project)
-        sync_branches(project)
-        sync_milestones(project)
-        sync_labels(project)
-        sync_releases(project)
-        sync_tags(project)
-        sync_pipelines(project)
+        sync_members(data)
+        sync_users(data)
+        sync_issues(data)
+        sync_jobs(data)
+        sync_merge_requests(data)
+        sync_commits(data)
+        sync_branches(data)
+        sync_milestones(data)
+        sync_labels(data)
+        sync_releases(data)
+        sync_tags(data)
+        sync_pipelines(data)
 
-        singer.write_record("projects", project, time_extracted=time_extracted)
+        if not stream.is_selected():
+            return
+
+        with Transformer(pre_hook=format_timestamp) as transformer:
+            flatten_id(data, "owner")
+            project = transformer.transform(data, RESOURCES["projects"]["schema"], mdata)
+            singer.write_record("projects", project, time_extracted=time_extracted)
+
         utils.update_state(STATE, state_key, last_activity_at)
         singer.write_state(STATE)
 
+def do_discover(select_all=False):
+    streams = []
+    for resource, config in RESOURCES.items():
+        mdata = metadata.get_standard_metadata(
+            schema=config["schema"],
+            key_properties=config["key_properties"],
+            valid_replication_keys=config.get("replication_keys"),
+            replication_method=config["replication_method"],
+        )
+
+        if (
+            resource in ULTIMATE_RESOURCES and not CONFIG["ultimate_license"]
+        ) or (
+            resource in STREAM_CONFIG_SWITCHES and not CONFIG["fetch_{}".format(resource)]
+        ):
+            mdata = metadata.to_list(metadata.write(metadata.to_map(mdata), (), 'inclusion', 'unsupported'))
+        elif select_all:
+            # If a catalog was unsupplied, we want to select all streams by default. This diverges
+            # slightly from Singer recommended behavior but is necessary for backwards compatibility
+            mdata = metadata.to_list(metadata.write(metadata.to_map(mdata), (), 'selected', True))
+
+        streams.append(
+            CatalogEntry(
+                tap_stream_id=resource,
+                stream=resource,
+                schema=Schema.from_dict(config["schema"]),
+                key_properties=config["key_properties"],
+                metadata=mdata,
+                replication_key=config.get("replication_keys"),
+                is_view=None,
+                database=None,
+                table=None,
+                row_count=None,
+                stream_alias=None,
+                replication_method=config["replication_method"],
+            )
+        )
+    return Catalog(streams)
 
 def do_sync():
     LOGGER.info("Starting sync")
@@ -656,17 +826,8 @@ def do_sync():
     gids = list(filter(None, CONFIG['groups'].split(' ')))
     pids = list(filter(None, CONFIG['projects'].split(' ')))
 
-    for resource, config in RESOURCES.items():
-        if (
-            resource in ULTIMATE_RESOURCES
-            and not CONFIG['ultimate_license']
-        ) or (
-            resource == "merge_request_commits"
-            and not CONFIG['fetch_merge_request_commits']
-        ):
-            continue
-
-        singer.write_schema(resource, config['schema'], config['key_properties'])
+    for stream in CATALOG.get_selected_streams(STATE):
+        singer.write_schema(stream.tap_stream_id, stream.schema.to_dict(), stream.key_properties)
 
     for gid in gids:
         sync_group(gid, pids)
@@ -704,11 +865,16 @@ def main_impl():
         STATE.update(args.state)
 
     # If discover flag was passed, log an info message and exit
+    global CATALOG
     if args.discover:
-        LOGGER.info('Schema discovery is not supported by tap-gitlab')
-        sys.exit(1)
+        CATALOG = do_discover()
+        CATALOG.dump()
     # Otherwise run in sync mode
     else:
+        if args.catalog:
+            CATALOG = args.catalog
+        else:
+            CATALOG = do_discover(select_all=True)
         do_sync()
 
 

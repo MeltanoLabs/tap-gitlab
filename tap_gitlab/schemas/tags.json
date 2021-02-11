@@ -2,16 +2,16 @@
     "type": "object",
     "properties": {
         "commit_id": {
-            "type": "string"
+            "type": ["null", "string"]
         },
         "project_id": {
-            "type": "integer"
+            "type": ["null", "integer"]
         },
         "name": {
-            "type": "string"
+            "type": ["null", "string"]
         },
         "target": {
-            "type": "string"
+            "type": ["null", "string"]
         },
         "message": {
             "type": ["null", "string"]

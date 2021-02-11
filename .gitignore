@@ -96,4 +96,5 @@ ENV/
 env.sh
 config.json
 state.json
+catalog.json
 .autoenv.zsh
