@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.9.13
+  * [#35](https://gitlab.com/meltano/tap-gitlab/-/issues/35) Select all streams when no catalog is provided, to ensure backward compatibility
+  * [#36](https://gitlab.com/meltano/tap-gitlab/-/issues/36) Make all properties nullable to pervent targets from failing when properties are deselected and not included in records
+
 ## 0.9.12
   * [#25](https://gitlab.com/meltano/tap-gitlab/-/issues/25) Implement discovery mode and stream/field selection
 
