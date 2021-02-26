@@ -68,7 +68,7 @@ RESOURCES = {
         'replication_keys': ['updated_at'],
     },
     'jobs': {
-        'url': '/projects/{id}/jobs',
+        'url': '/projects/{id}/pipelines/{secondary_id}/jobs',
         'schema': load_schema('jobs'),
         'key_properties': ['id'],
         'replication_method': 'FULL_TABLE',
@@ -176,7 +176,6 @@ RESOURCES = {
 
 ULTIMATE_RESOURCES = ("epics", "epic_issues")
 STREAM_CONFIG_SWITCHES = ('merge_request_commits', 'pipelines_extended')
-TERMINAL_JOB_STATUSES = ('failed', 'success', 'canceled', 'skipped', 'manual')
 
 LOGGER = singer.get_logger()
 SESSION = requests.Session()
@@ -374,53 +373,6 @@ def sync_issues(project):
 
     singer.write_state(STATE)
 
-def sync_jobs(project):
-    entity = "jobs"
-    stream = CATALOG.get_stream(entity)
-    mdata = metadata.to_map(stream.metadata)
-    if not stream.is_selected():
-        return
-
-    # Keep a state for the jobs fetched per project
-    state_key = "project_{}_jobs".format(project['id'])
-    # The Jobs API doesn't support filtering by ID or time, it simply returns
-    # jobs by ID descending. To avoid fetching the entire job history every time,
-    # we assume jobs don't change after they complete, so we store the highest
-    # job created_at after which there are only jobs in a terminal state, up to
-    # the start_date.
-    start_date = get_start(state_key)
-    if start_date:
-        start_at = parse_datetime(start_date).astimezone(tz=pytz.UTC).timestamp()
-    else:
-        start_at = 0
-    terminal_created_at = start_at
-
-    url = get_url(entity=entity, id=project['id'])
-    with Transformer(pre_hook=format_timestamp) as transformer:
-        for row in gen_request(url):
-            row['project_id'] = project['id']
-            flatten_id(row, 'user')
-            flatten_id(row, 'commit')
-            flatten_id(row, 'pipeline')
-            flatten_id(row, 'runner')
-
-            created_at = rfc3339_to_timestamp(row['created_at'])
-            if created_at < start_at:
-                break
-
-            transformed_row = transformer.transform(row, RESOURCES[entity]['schema'], mdata)
-            singer.write_record(entity, transformed_row, time_extracted=utils.now())
-
-            if row['status'] not in TERMINAL_JOB_STATUSES:
-                terminal_created_at = start_at
-            elif terminal_created_at < created_at:
-                terminal_created_at = created_at
-
-    new_start = datetime.datetime.utcfromtimestamp(terminal_created_at).replace(tzinfo=pytz.UTC)
-    utils.update_state(STATE, state_key, new_start)
-
-    singer.write_state(STATE)
-
 def sync_merge_requests(project):
     entity = "merge_requests"
     stream = CATALOG.get_stream(entity)
@@ -468,8 +420,7 @@ def sync_merge_requests(project):
 
             # And then sync all the commits for this MR
             # (if it has changed, new commits may be there to fetch)
-            if CONFIG['fetch_merge_request_commits']:
-                sync_merge_request_commits(project, transformed_row)
+            sync_merge_request_commits(project, transformed_row)
 
     singer.write_state(STATE)
 
@@ -709,8 +660,12 @@ def sync_pipelines(project):
 
             # Sync additional details of a pipeline using get-a-single-pipeline endpoint
             # https://docs.gitlab.com/ee/api/pipelines.html#get-a-single-pipeline
-            if CONFIG['fetch_pipelines_extended']:
-                sync_pipelines_extended(project, transformed_row)
+            sync_pipelines_extended(project, transformed_row)
+
+            # Sync all jobs attached to the pipeline.
+            # Although jobs cannot be queried by updated_at, if a job changes
+            # it's pipeline's updated_at is changed.
+            sync_jobs(project, transformed_row)
 
     singer.write_state(STATE)
 
@@ -726,9 +681,28 @@ def sync_pipelines_extended(project, pipeline):
     with Transformer(pre_hook=format_timestamp) as transformer:
         for row in gen_request(url):
             row['project_id'] = project['id']
-            transformed_row = transformer.transform(row, RESOURCES["pipelines_extended"]["schema"], mdata)
+            transformed_row = transformer.transform(row, RESOURCES[entity]["schema"], mdata)
 
-            singer.write_record("pipelines_extended", transformed_row, time_extracted=utils.now())
+            singer.write_record(entity, transformed_row, time_extracted=utils.now())
+
+def sync_jobs(project, pipeline):
+    entity = "jobs"
+    stream = CATALOG.get_stream(entity)
+    mdata = metadata.to_map(stream.metadata)
+    if not stream.is_selected():
+        return
+
+    url = get_url(entity=entity, id=project['id'], secondary_id=pipeline['id'])
+    with Transformer(pre_hook=format_timestamp) as transformer:
+        for row in gen_request(url):
+            row['project_id'] = project['id']
+            flatten_id(row, 'user')
+            flatten_id(row, 'commit')
+            flatten_id(row, 'pipeline')
+            flatten_id(row, 'runner')
+
+            transformed_row = transformer.transform(row, RESOURCES[entity]['schema'], mdata)
+            singer.write_record(entity, transformed_row, time_extracted=utils.now())
 
 def sync_project(pid):
     url = get_url(entity="projects", id=pid)
@@ -760,7 +734,6 @@ def sync_project(pid):
         sync_members(data)
         sync_users(data)
         sync_issues(data)
-        sync_jobs(data)
         sync_merge_requests(data)
         sync_commits(data)
         sync_branches(data)
