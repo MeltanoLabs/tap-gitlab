@@ -223,18 +223,17 @@ def request(url, params=None):
     if 'user_agent' in CONFIG:
         headers['User-Agent'] = CONFIG['user_agent']
 
-    req = requests.Request('GET', url, params=params, headers=headers).prepare()
-    LOGGER.info("GET {}".format(req.url))
-    resp = SESSION.send(req)
+    resp = SESSION.request('GET', url, params=params, headers=headers)
+    LOGGER.info("GET {}".format(url))
 
     if resp.status_code in [401, 403]:
-        LOGGER.info("Skipping request to {}".format(req.url))
+        LOGGER.info("Skipping request to {}".format(url))
         LOGGER.info("Reason: {} - {}".format(resp.status_code, resp.content))
         raise ResourceInaccessible
     elif resp.status_code >= 400:
         LOGGER.critical(
             "Error making request to GitLab API: GET {} [{} - {}]".format(
-                req.url, resp.status_code, resp.content))
+                url, resp.status_code, resp.content))
         sys.exit(1)
 
     return resp
