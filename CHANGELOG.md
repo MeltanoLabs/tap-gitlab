@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.9.15
+
+  * [#39](https://gitlab.com/meltano/tap-gitlab/-/issues/39) Add support for self-signed SSL certificate on self-hosted GitLab instance by allowing a certificate bundle to be configured using the `REQUESTS_CA_BUNDLE` env var.
+
 ## 0.9.14
   * [!37](https://gitlab.com/meltano/tap-gitlab/-/merge_requests/37) Refactor `jobs` syncing to increase performance
 
