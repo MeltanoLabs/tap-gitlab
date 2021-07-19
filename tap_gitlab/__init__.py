@@ -293,9 +293,9 @@ def flatten_id(item, target):
 def sync_branches(project):
     entity = "branches"
     stream = CATALOG.get_stream(entity)
-    mdata = metadata.to_map(stream.metadata)
-    if not stream.is_selected():
+    if stream is None or not stream.is_selected():
         return
+    mdata = metadata.to_map(stream.metadata)
 
     url = get_url(entity="branches", id=project['id'])
     with Transformer(pre_hook=format_timestamp) as transformer:
@@ -308,9 +308,9 @@ def sync_branches(project):
 def sync_commits(project):
     entity = "commits"
     stream = CATALOG.get_stream(entity)
-    mdata = metadata.to_map(stream.metadata)
-    if not stream.is_selected():
+    if stream is None or not stream.is_selected():
         return
+    mdata = metadata.to_map(stream.metadata)
 
     # Keep a state for the commits fetched per project
     state_key = "project_{}_commits".format(project["id"])
@@ -330,9 +330,9 @@ def sync_commits(project):
 def sync_issues(project):
     entity = "issues"
     stream = CATALOG.get_stream(entity)
-    mdata = metadata.to_map(stream.metadata)
-    if not stream.is_selected():
+    if stream is None or not stream.is_selected():
         return
+    mdata = metadata.to_map(stream.metadata)
 
     # Keep a state for the issues fetched per project
     state_key = "project_{}_issues".format(project["id"])
@@ -375,9 +375,9 @@ def sync_issues(project):
 def sync_merge_requests(project):
     entity = "merge_requests"
     stream = CATALOG.get_stream(entity)
-    mdata = metadata.to_map(stream.metadata)
-    if not stream.is_selected():
+    if stream is None or not stream.is_selected():
         return
+    mdata = metadata.to_map(stream.metadata)
 
     # Keep a state for the merge requests fetched per project
     state_key = "project_{}_merge_requests".format(project["id"])
@@ -426,9 +426,9 @@ def sync_merge_requests(project):
 def sync_merge_request_commits(project, merge_request):
     entity = "merge_request_commits"
     stream = CATALOG.get_stream(entity)
-    mdata = metadata.to_map(stream.metadata)
-    if not stream.is_selected():
+    if stream is None or not stream.is_selected():
         return
+    mdata = metadata.to_map(stream.metadata)
 
     url = get_url(entity="merge_request_commits", id=project['id'], secondary_id=merge_request['iid'])
 
@@ -445,9 +445,9 @@ def sync_merge_request_commits(project, merge_request):
 def sync_releases(project):
     entity = "releases"
     stream = CATALOG.get_stream(entity)
-    mdata = metadata.to_map(stream.metadata)
-    if not stream.is_selected():
+    if stream is None or not stream.is_selected():
         return
+    mdata = metadata.to_map(stream.metadata)
 
     url = get_url(entity="releases", id=project['id'])
     with Transformer(pre_hook=format_timestamp) as transformer:
@@ -463,9 +463,9 @@ def sync_releases(project):
 def sync_tags(project):
     entity = "tags"
     stream = CATALOG.get_stream(entity)
-    mdata = metadata.to_map(stream.metadata)
-    if not stream.is_selected():
+    if stream is None or not stream.is_selected():
         return
+    mdata = metadata.to_map(stream.metadata)
 
     url = get_url(entity="tags", id=project['id'])
     with Transformer(pre_hook=format_timestamp) as transformer:
@@ -480,9 +480,9 @@ def sync_tags(project):
 def sync_milestones(entity, element="project"):
     stream_name = "{}_milestones".format(element)
     stream = CATALOG.get_stream(stream_name)
-    mdata = metadata.to_map(stream.metadata)
-    if not stream.is_selected():
+    if stream is None or not stream.is_selected():
         return
+    mdata = metadata.to_map(stream.metadata)
 
     url = get_url(entity=element + "_milestones", id=entity['id'])
 
@@ -495,9 +495,9 @@ def sync_milestones(entity, element="project"):
 def sync_users(project):
     entity = "users"
     stream = CATALOG.get_stream(entity)
-    mdata = metadata.to_map(stream.metadata)
-    if not stream.is_selected():
+    if stream is None or not stream.is_selected():
         return
+    mdata = metadata.to_map(stream.metadata)
 
     url = get_url(entity="users", id=project['id'])
     project["users"] = []
@@ -511,11 +511,11 @@ def sync_users(project):
 def sync_members(entity, element="project"):
     stream_name = "{}_members".format(element)
     member_stream = CATALOG.get_stream(stream_name)
+    if member_stream is None or not member_stream.is_selected():
+        return
     user_stream = CATALOG.get_stream('users')
     member_mdata = metadata.to_map(member_stream.metadata)
     user_mdata = metadata.to_map(user_stream.metadata)
-    if not member_stream.is_selected():
-        return
 
     url = get_url(entity=stream_name, id=entity['id'])
 
@@ -536,9 +536,9 @@ def sync_members(entity, element="project"):
 def sync_labels(entity, element="project"):
     stream_name = "{}_labels".format(element)
     stream = CATALOG.get_stream(stream_name)
-    mdata = metadata.to_map(stream.metadata)
-    if not stream.is_selected():
+    if stream is None or not stream.is_selected():
         return
+    mdata = metadata.to_map(stream.metadata)
 
     url = get_url(entity=element + "_labels", id=entity['id'])
 
@@ -551,9 +551,9 @@ def sync_labels(entity, element="project"):
 def sync_epic_issues(group, epic):
     entity = "epic_issues"
     stream = CATALOG.get_stream(entity)
-    mdata = metadata.to_map(stream.metadata)
-    if not stream.is_selected():
+    if stream is None or not stream.is_selected():
         return
+    mdata = metadata.to_map(stream.metadata)
 
     url = get_url(entity="epic_issues", id=group['id'], secondary_id=epic['iid'])
 
@@ -570,9 +570,9 @@ def sync_epic_issues(group, epic):
 def sync_epics(group):
     entity = "epics"
     stream = CATALOG.get_stream(entity)
-    mdata = metadata.to_map(stream.metadata)
-    if not stream.is_selected():
+    if stream is None or not stream.is_selected():
         return
+    mdata = metadata.to_map(stream.metadata)
 
     # Keep a state for the epics fetched per group
     state_key = "group_{}_epics".format(group['id'])
@@ -638,7 +638,7 @@ def sync_group(gid, pids):
 def sync_pipelines(project):
     entity = "pipelines"
     stream = CATALOG.get_stream(entity)
-    if not stream.is_selected():
+    if stream is None or not stream.is_selected():
         return
 
     mdata = metadata.to_map(stream.metadata)
@@ -687,9 +687,9 @@ def sync_pipelines_extended(project, pipeline):
 def sync_jobs(project, pipeline):
     entity = "jobs"
     stream = CATALOG.get_stream(entity)
-    mdata = metadata.to_map(stream.metadata)
-    if not stream.is_selected():
+    if stream is None or not stream.is_selected():
         return
+    mdata = metadata.to_map(stream.metadata)
 
     url = get_url(entity=entity, id=project['id'], secondary_id=pipeline['id'])
     with Transformer(pre_hook=format_timestamp) as transformer:
