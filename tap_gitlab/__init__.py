@@ -3,6 +3,7 @@
 import datetime
 import sys
 import os
+import re
 import requests
 import singer
 from singer import Transformer, utils, metadata
@@ -100,6 +101,12 @@ RESOURCES = {
     },
     'users': {
         'url': '/projects/{id}/users',
+        'schema': load_schema('users'),
+        'key_properties': ['id'],
+        'replication_method': 'FULL_TABLE',
+    },
+    'site_users': {
+        'url': '/users',
         'schema': load_schema('users'),
         'key_properties': ['id'],
         'replication_method': 'FULL_TABLE',
@@ -343,6 +350,7 @@ def sync_issues(project):
         for row in gen_request(url):
             flatten_id(row, "author")
             flatten_id(row, "assignee")
+            flatten_id(row, "epic")
             flatten_id(row, "closed_by")
             flatten_id(row, "milestone")
 
@@ -397,6 +405,12 @@ def sync_merge_requests(project):
             for assignee in row.get("assignees"):
                 assignee_ids.append(assignee["id"])
             row["assignees"] = assignee_ids
+
+            # Get the reviewer ids
+            reviewer_ids = []
+            for reviewer in row.get("reviewers"):
+                reviewer_ids.append(reviewer["id"])
+            row["reviewers"] = reviewer_ids
 
             # Get the time_stats
             time_stats = row.get("time_stats")
@@ -506,6 +520,19 @@ def sync_users(project):
             transformed_row = transformer.transform(row, RESOURCES["users"]["schema"], mdata)
             project["users"].append(row["id"])
             singer.write_record("users", transformed_row, time_extracted=utils.now())
+
+def sync_site_users():
+    entity = "site_users"
+    stream = CATALOG.get_stream(entity)
+    if stream is None or not stream.is_selected():
+        return
+    mdata = metadata.to_map(stream.metadata)
+
+    url = get_url(entity="site_users", id="all")
+    with Transformer(pre_hook=format_timestamp) as transformer:
+        for row in gen_request(url):
+            transformed_row = transformer.transform(row, RESOURCES["users"]["schema"], mdata)
+            singer.write_record("site_users", transformed_row, time_extracted=utils.now())
 
 
 def sync_members(entity, element="project"):
@@ -755,6 +782,8 @@ def sync_project(pid):
 
 def do_discover(select_all=False):
     streams = []
+    api_url_regex = re.compile(r'^gitlab.com')
+
     for resource, config in RESOURCES.items():
         mdata = metadata.get_standard_metadata(
             schema=config["schema"],
@@ -765,6 +794,8 @@ def do_discover(select_all=False):
 
         if (
             resource in ULTIMATE_RESOURCES and not CONFIG["ultimate_license"]
+        ) or (
+            resource == "site_users" and api_url_regex.match(CONFIG['api_url']) is not None
         ) or (
             resource in STREAM_CONFIG_SWITCHES and not CONFIG["fetch_{}".format(resource)]
         ):
@@ -800,6 +831,8 @@ def do_sync():
 
     for stream in CATALOG.get_selected_streams(STATE):
         singer.write_schema(stream.tap_stream_id, stream.schema.to_dict(), stream.key_properties)
+
+    sync_site_users()
 
     for gid in gids:
         sync_group(gid, pids)

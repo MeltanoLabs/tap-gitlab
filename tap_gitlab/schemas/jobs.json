@@ -28,6 +28,9 @@
         "ref": {
             "type": ["null", "string"]
         },
+        "web_url": {
+            "type": ["null", "string"]
+        },
         "status": {
             "anyOf": [
                 {

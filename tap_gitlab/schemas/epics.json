@@ -19,6 +19,9 @@
         "description": {
             "type": ["null", "string"]
         },
+        "web_url": {
+            "type": ["null", "string"]
+        },
         "state": {
             "type": ["null", "string"]
         },

@@ -13,6 +13,9 @@
         "milestone_id": {
             "type": ["null", "integer"]
         },
+        "epic_id": {
+            "type": ["null", "integer"]
+        },
         "author_id": {
             "type": ["null", "integer"]
         },
