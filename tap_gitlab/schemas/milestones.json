@@ -19,11 +19,17 @@
         "description": {
             "type": ["null", "string"]
         },
+        "web_url": {
+            "type": ["null", "string"]
+        },
         "start_date": {
             "type": ["null", "string"]
         },
         "due_date": {
             "type": ["null", "string"]
+        },
+        "expired": {
+            "type": ["null", "boolean"]
         },
         "state": {
             "type": ["null", "string"]

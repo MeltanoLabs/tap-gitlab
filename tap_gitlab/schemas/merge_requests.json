@@ -25,6 +25,12 @@
                 "type": ["null", "integer"]
             }
         },        
+        "reviewers": {
+            "type": "array",
+            "items": {
+                "type": ["null", "integer"]
+            }
+        },  
         "merged_by_id": {
             "type": ["null", "integer"]
         },
@@ -117,7 +123,13 @@
         "merge_status": {
             "type": ["null", "string"]
         },
+        "has_conflicts": {
+            "type": ["null", "boolean"]
+        },
         "sha": {
+            "type": ["null", "string"]
+        },
+        "squash_commit_sha": {
             "type": ["null", "string"]
         },
         "user_notes_count": {
