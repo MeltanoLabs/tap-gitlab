@@ -129,6 +129,12 @@ RESOURCES = {
         'key_properties': ['group_id', 'id'],
         'replication_method': 'FULL_TABLE',
     },
+    'group_projects': {
+        'url': '/groups/{id}/projects',
+        'schema': load_schema('group_projects'),
+        'key_properties': ['id'],
+        'replication_method': 'FULL_TABLE',
+    },
     'releases': {
         'url': '/projects/{id}/releases',
         'schema': load_schema('releases'),
@@ -643,9 +649,10 @@ def sync_group(gid, pids):
 
     if not pids:
         #  Get all the projects of the group if none are provided
-        for project in data['projects']:
-            if project['id']:
-                sync_project(project['id'])
+        group_projects_url = get_url(entity="group_projects", id=gid)        
+        for project in gen_request(group_projects_url):
+            if project["id"]:
+                sync_project(project["id"])
     else:
         # Sync only specific projects of the group, if explicit projects are provided
         for pid in pids:

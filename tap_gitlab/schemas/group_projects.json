@@ -1,0 +1,156 @@
+{
+    "type": "object",
+    "properties": {
+        "archived": {
+            "type": ["null", "boolean"]
+        },
+        "avatar_url": {
+            "type": ["null", "string"]
+        },
+        "created_at": {
+            "anyOf": [
+                {
+                    "type": "string",
+                    "format": "date-time"
+                },
+                {
+                    "type": "null"
+                }
+            ]
+        },
+        "creator_id": {
+            "type": ["null", "integer"]
+        },
+        "default_branch": {
+            "type": ["null", "string"]
+        },
+        "description": {
+            "type": ["null", "string"]
+        },
+        "forks_count": {
+            "type": ["null", "integer"]
+        },
+        "http_url_to_repo": {
+            "type": ["null", "string"]
+        },
+        "id": {
+            "type": ["null", "integer"]
+        },
+        "issues_enabled": {
+            "type": ["null", "boolean"]
+        },
+        "jobs_enabled": {
+            "type": ["null", "boolean"]
+        },
+        "last_activity_at": {
+            "anyOf": [
+                {
+                    "type": "string",
+                    "format": "date-time"
+                },
+                {
+                    "type": "null"
+                }
+            ]
+        },
+        "merge_requests_enabled": {
+            "type": ["null", "boolean"]
+        },
+        "name": {
+            "type": ["null", "string"]
+        },
+        "name_with_namespace": {
+            "type": ["null", "string"]
+        },
+        "namespace": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": ["null", "integer"]
+                },
+                "kind": {
+                    "type": ["null", "string"]
+                },
+                "name": {
+                    "type": ["null", "string"]
+                },
+                "path": {
+                    "type": ["null", "string"]
+                }
+            }
+        },
+        "open_issues_count": {
+            "type": ["null", "integer"]
+        },
+        "path": {
+            "type": ["null", "string"]
+        },
+        "path_with_namespace": {
+            "type": ["null", "string"]
+        },
+        "public_jobs": {
+            "type": ["null", "boolean"]
+        },
+        "request_access_enabled": {
+            "type": ["null", "boolean"]
+        },
+        "shared_runners_enabled": {
+            "type": ["null", "boolean"]
+        },
+        "shared_with_groups": {
+            "anyOf": [
+                {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "group_id": {
+                                "type": ["null", "integer"]
+                            },
+                            "group_name": {
+                                "type": ["null", "string"]
+                            },
+                            "group_access_level": {
+                                "type": ["null", "integer"]
+                            }
+                        }
+                    }
+                },
+                {
+                    "type": "null"
+                }
+            ]
+        },
+        "snippets_enabled": {
+            "type": ["null", "boolean"]
+        },
+        "ssh_url_to_repo": {
+            "type": ["null", "string"]
+        },
+        "star_count": {
+            "type": ["null", "integer"]
+        },
+        "tag_list": {
+            "anyOf": [
+                {
+                    "type": "array",
+                    "items": {
+                        "type": ["null", "string"]
+                    }
+                },
+                {
+                    "type": "null"
+                }
+            ]
+        },
+        "visibility": {
+            "type": ["null", "string"]
+        },
+        "web_url": {
+            "type": ["null", "string"]
+        },
+        "wiki_enabled": {
+            "type": ["null", "boolean"]
+        }
+    }
+}
