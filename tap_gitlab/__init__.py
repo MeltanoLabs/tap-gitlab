@@ -22,6 +22,7 @@ CONFIG = {
     'start_date': None,
     'groups': '',
     'ultimate_license': False,
+    'fetch_bridges': False,
     'fetch_merge_request_commits': False,
     'fetch_pipelines_extended': False
 }
@@ -69,7 +70,7 @@ RESOURCES = {
         'replication_keys': ['updated_at'],
     },
     'jobs': {
-        'url': '/projects/{id}/pipelines/{secondary_id}/jobs',
+        'url': '/projects/{id}/pipelines/{secondary_id}/jobs?include_retried=true',
         'schema': load_schema('jobs'),
         'key_properties': ['id'],
         'replication_method': 'FULL_TABLE',
@@ -176,6 +177,12 @@ RESOURCES = {
     'pipelines_extended': {
         'url': '/projects/{id}/pipelines/{secondary_id}',
         'schema': load_schema('pipelines_extended'),
+        'key_properties': ['id'],
+        'replication_method': 'FULL_TABLE',
+    },
+    'bridges': {
+        'url': '/projects/{id}/pipelines/{secondary_id}/bridges',
+        'schema': load_schema('bridges'),
         'key_properties': ['id'],
         'replication_method': 'FULL_TABLE',
     },
@@ -693,7 +700,35 @@ def sync_pipelines(project):
             # it's pipeline's updated_at is changed.
             sync_jobs(project, transformed_row)
 
+            sync_bridges(project, transformed_row)
+
     singer.write_state(STATE)
+
+def sync_bridges(project, pipeline):
+    entity = "bridges"
+    stream = CATALOG.get_stream(entity)
+    if not stream.is_selected():
+        return
+
+    mdata = metadata.to_map(stream.metadata)
+    url = get_url(entity=entity, id=project['id'], secondary_id=pipeline['id'])
+
+    with Transformer(pre_hook=format_timestamp) as transformer:
+        for row in gen_request(url):
+            row['project_id'] = project['id']
+            transformed_row = transformer.transform(row, RESOURCES[entity]["schema"], mdata)
+
+            singer.write_record(entity, transformed_row, time_extracted=utils.now())
+
+            if transformed_row["downstream_pipeline"]:
+                # Sync additional details of a pipeline using get-a-single-pipeline endpoint
+                # https://docs.gitlab.com/ee/api/pipelines.html#get-a-single-pipeline
+                sync_pipelines_extended(project, transformed_row["downstream_pipeline"])
+
+                # Sync all jobs attached to the pipeline.
+                # Although jobs cannot be queried by updated_at, if a job changes
+                # it's pipeline's updated_at is changed.
+                sync_jobs(project, transformed_row["downstream_pipeline"])
 
 def sync_pipelines_extended(project, pipeline):
     entity = "pipelines_extended"

@@ -1,0 +1,244 @@
+{
+  "type": "object",
+  "properties": {
+    "commit": {
+      "type": "object",
+      "properties": {
+        "author_email": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "author_name": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "created_at": {
+          "type": ["null", "string"],
+          "format": "date-time"
+        },
+        "id": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "message": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "short_id": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "title": {
+          "type": [
+            "null",
+            "string"
+          ]
+        }
+      }
+    },
+    "allow_failure": {
+      "type": [
+        "null",
+        "boolean"
+      ]
+    },
+    "queued_duration": {
+      "type": ["null", "number"],
+      "format": "float"
+    },
+    "name": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "pipeline": {
+      "type": "object",
+      "properties": {
+        "sha": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "project_id": {
+          "type": [
+            "null",
+            "integer"
+          ]
+        },
+        "id": {
+          "type": [
+            "null",
+            "integer"
+          ]
+        },
+        "status": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "ref": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "created_at": {
+          "type": ["null", "string"],
+          "format": "date-time"
+        },
+        "updated_at": {
+          "type": ["null", "string"],
+          "format": "date-time"
+        },
+        "web_url": {
+          "type": [
+            "null",
+            "string"
+          ]
+        }
+      }
+    },
+    "stage": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "project_id": {
+      "type": [
+        "null",
+        "integer"
+      ]
+    },
+    "id": {
+      "type": [
+        "null",
+        "integer"
+      ]
+    },
+    "status": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "ref": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "tag": {
+      "type": [
+        "null",
+        "boolean"
+      ]
+    },
+    "user": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "username": {
+          "type": "string"
+        },
+        "id": {
+          "type": "integer"
+        },
+        "state": {
+          "type": "string"
+        }
+      }
+    },
+    "downstream_pipeline": {
+      "type": ["null", "object"],
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "sha": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "ref": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "status": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "created_at": {
+          "type": ["null", "string"],
+          "format": "date-time"
+        },
+        "updated_at": {
+          "type": ["null", "string"],
+          "format": "date-time"
+        },
+        "web_url": {
+          "type": [
+            "null",
+            "string"
+          ]
+        }
+      }
+    },
+    "created_at": {
+      "type": ["null", "string"],
+      "format": "date-time"
+    },
+    "updated_at": {
+      "type": ["null", "string"],
+      "format": "date-time"
+    },
+    "started_at": {
+      "type": ["null", "string"],
+      "format": "date-time"
+    },
+    "finished_at": {
+      "type": ["null", "string"],
+      "format": "date-time"
+    },
+    "committed_at": {
+      "type": ["null", "string"],
+      "format": "date-time"
+    },
+    "duration": {
+      "type": [
+        "null",
+        "integer"
+      ]
+    },
+    "coverage": {
+      "type": ["null", "number"],
+      "format": "float"
+    },
+    "web_url": {
+      "type": [
+        "null",
+        "string"
+      ]
+    }
+  }
+}
