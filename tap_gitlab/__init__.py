@@ -179,6 +179,12 @@ RESOURCES = {
         'key_properties': ['id'],
         'replication_method': 'FULL_TABLE',
     },
+     'vulnerabilities': {
+            'url': '/projects/{id}/vulnerabilities',
+            'schema': load_schema('vulnerabilities'),
+            'key_properties': ['id'],
+            'replication_method': 'FULL_TABLE',
+        },
 }
 
 ULTIMATE_RESOURCES = ("epics", "epic_issues")
@@ -191,7 +197,7 @@ TRUTHY = ("true", "1", "yes", "on")
 
 class ResourceInaccessible(Exception):
     """
-    Base exception for Rousources the current user can not access.
+    Base exception for Resources the current user can not access.
     e.g. Unauthorized, Forbidden, Not Found errors
     """
 
@@ -711,6 +717,21 @@ def sync_pipelines_extended(project, pipeline):
 
             singer.write_record(entity, transformed_row, time_extracted=utils.now())
 
+def sync_vulnerabilities(project):
+    entity = "vulnerabilities"
+    stream = CATALOG.get_stream(entity)
+    if stream is None or not stream.is_selected():
+        return
+    mdata = metadata.to_map(stream.metadata)
+
+    url = get_url(entity="vulnerabilities", id=project['id'])
+    project["vulnerabilitiess"] = []
+    with Transformer(pre_hook=format_timestamp) as transformer:
+        for row in gen_request(url):
+            transformed_row = transformer.transform(row, RESOURCES["vulnerabilities"]["schema"], mdata)
+            project["vulnerabilities"].append(row["id"])
+            singer.write_record("vulnerabilities", transformed_row, time_extracted=utils.now())
+
 def sync_jobs(project, pipeline):
     entity = "jobs"
     stream = CATALOG.get_stream(entity)
@@ -768,6 +789,7 @@ def sync_project(pid):
         sync_releases(data)
         sync_tags(data)
         sync_pipelines(data)
+        sync_vulnerabilities(data)
 
         if not stream.is_selected():
             return
