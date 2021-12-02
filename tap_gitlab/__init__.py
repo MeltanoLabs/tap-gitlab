@@ -725,7 +725,7 @@ def sync_vulnerabilities(project):
     mdata = metadata.to_map(stream.metadata)
 
     url = get_url(entity="vulnerabilities", id=project['id'])
-    project["vulnerabilitiess"] = []
+    project["vulnerabilities"] = []
     with Transformer(pre_hook=format_timestamp) as transformer:
         for row in gen_request(url):
             transformed_row = transformer.transform(row, RESOURCES["vulnerabilities"]["schema"], mdata)
