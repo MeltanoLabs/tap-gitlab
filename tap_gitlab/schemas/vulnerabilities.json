@@ -169,171 +169,6 @@
         }
       }
     },
-    "author_id": {
-      "type": [
-        "null",
-        "integer"
-      ]
-    },
-    "confidence": {
-      "type": [
-        "null",
-        "string"
-      ]
-    },
-    "created_at": {
-      "anyOf": [
-        {
-          "type": "string",
-          "format": "date-time"
-        },
-        {
-          "type": "null"
-        }
-      ]
-    },
-    "description": {
-      "type": [
-        "null",
-        "string"
-      ]
-    },
-    "dismissed_at": {
-      "anyOf": [
-        {
-          "type": "string",
-          "format": "date-time"
-        },
-        {
-          "type": "null"
-        }
-      ]
-    },
-    "dismissed_by_id": {
-      "type": [
-        "null",
-        "integer"
-      ]
-    },
-    "due_date": {
-      "anyOf": [
-        {
-          "type": "string",
-          "format": "date-time"
-        },
-        {
-          "type": "null"
-        }
-      ]
-    },
-    "finding": {
-      "confidence": {
-        "type": [
-          "null",
-          "string"
-        ]
-      },
-      "created_at": {
-        "anyOf": [
-          {
-            "type": "string",
-            "format": "date-time"
-          },
-          {
-            "type": "null"
-          }
-        ]
-      },
-      "id": {
-        "type": [
-          "null",
-          "integer"
-        ]
-      },
-      "location_fingerprint": {
-        "type": [
-          "null",
-          "string"
-        ]
-      },
-      "metadata_version": {
-        "type": [
-          "null",
-          "string"
-        ]
-      },
-      "name": {
-        "type": [
-          "null",
-          "string"
-        ]
-      },
-      "primary_identifier_id": {
-        "type": [
-          "null",
-          "integer"
-        ]
-      },
-      "project_fingerprint": {
-        "type": [
-          "null",
-          "string"
-        ]
-      },
-      "project_id": {
-        "type": [
-          "null",
-          "integer"
-        ]
-      },
-      "raw_metadata": {
-        "type": [
-          "null",
-          "string"
-        ]
-      },
-      "report_type": {
-        "type": [
-          "null",
-          "string"
-        ]
-      },
-      "scanner_id": {
-        "type": [
-          "null",
-          "integer"
-        ]
-      },
-      "severity": {
-        "type": [
-          "null",
-          "string"
-        ]
-      },
-      "updated_at": {
-        "anyOf": [
-          {
-            "type": "string",
-            "format": "date-time"
-          },
-          {
-            "type": "null"
-          }
-        ]
-      },
-      "uuid": {
-        "type": [
-          "null",
-          "string"
-        ]
-      },
-      "vulnerability_id": {
-        "type": [
-          "null",
-          "integer"
-        ]
-      }
-    },
     "id": {
       "type": [
         "null",
@@ -371,7 +206,12 @@
             }
           ]
         },
-        "description": "",
+        "description": 
+          "type": [
+            "null",
+            "string"
+          ]
+        },
         "id": {
           "type": [
             "null",
