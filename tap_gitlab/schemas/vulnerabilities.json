@@ -206,7 +206,7 @@
             }
           ]
         },
-        "description": 
+        "description": {
           "type": [
             "null",
             "string"
