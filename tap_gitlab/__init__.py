@@ -239,7 +239,7 @@ def request(url, params=None):
     resp = SESSION.request('GET', url, params=params, headers=headers)
     LOGGER.info("GET {}".format(url))
 
-    if resp.status_code in [401, 403]:
+    if resp.status_code in [401, 403, 404]:
         LOGGER.info("Skipping request to {}".format(url))
         LOGGER.info("Reason: {} - {}".format(resp.status_code, resp.content))
         raise ResourceInaccessible
