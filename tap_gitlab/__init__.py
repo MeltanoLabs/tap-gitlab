@@ -191,6 +191,18 @@ RESOURCES = {
             'key_properties': ['id'],
             'replication_method': 'FULL_TABLE',
         },
+    'project_variables': {
+        'url': '/projects/{id}/variables',
+        'schema': load_schema('project_variables'),
+        'key_properties': ['project_id', 'key'],
+        'replication_method': 'FULL_TABLE'
+    },
+    'group_variables': {
+        'url': '/groups/{id}/variables',
+        'schema': load_schema('group_variables'),
+        'key_properties': ['group_id', 'key'],
+        'replication_method': 'FULL_TABLE'
+    }
 }
 
 ULTIMATE_RESOURCES = ("epics", "epic_issues")
@@ -649,7 +661,7 @@ def sync_group(gid, pids):
 
     if not pids:
         #  Get all the projects of the group if none are provided
-        group_projects_url = get_url(entity="group_projects", id=gid)        
+        group_projects_url = get_url(entity="group_projects", id=gid)
         for project in gen_request(group_projects_url):
             if project["id"]:
                 sync_project(project["id"])
@@ -664,6 +676,8 @@ def sync_group(gid, pids):
     sync_members(data, "group")
 
     sync_labels(data, "group")
+
+    sync_variables(data, "group")
 
     if CONFIG['ultimate_license']:
         sync_epics(data)
@@ -758,6 +772,21 @@ def sync_jobs(project, pipeline):
             transformed_row = transformer.transform(row, RESOURCES[entity]['schema'], mdata)
             singer.write_record(entity, transformed_row, time_extracted=utils.now())
 
+def sync_variables(entity, element="project"):
+    stream_name = "{}_variables".format(element)
+    stream = CATALOG.get_stream(stream_name)
+    if stream is None or not stream.is_selected():
+        return
+    mdata = metadata.to_map(stream.metadata)
+
+    url = get_url(entity=element + "_variables", id=entity['id'])
+
+    with Transformer(pre_hook=format_timestamp) as transformer:
+        for row in gen_request(url):
+            row[element + '_id'] = entity['id']
+            transformed_row = transformer.transform(row, RESOURCES[element + "_variables"]["schema"], mdata)
+            singer.write_record(element + "_variables", transformed_row, time_extracted=utils.now())
+
 def sync_project(pid):
     url = get_url(entity="projects", id=pid)
 
@@ -797,6 +826,7 @@ def sync_project(pid):
         sync_tags(data)
         sync_pipelines(data)
         sync_vulnerabilities(data)
+        sync_variables(data)
 
         if not stream.is_selected():
             return

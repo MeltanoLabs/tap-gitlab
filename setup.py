@@ -37,6 +37,8 @@ setup(name='tap-gitlab',
             "tags.json",
             "releases.json",
             "vulnerabilities.json",
+            "project_variables.json",
+            "group_variables.json"
           ],
       },
       include_package_data=True,
