@@ -26,6 +26,8 @@ This tap:
   - [Epics](https://docs.gitlab.com/ee/api/epics.html) (only available for GitLab Ultimate and GitLab.com Gold accounts)
   - [Epic Issues](https://docs.gitlab.com/ee/api/epic_issues.html) (only available for GitLab Ultimate and GitLab.com Gold accounts)
   - [Vulnerabilities](https://docs.gitlab.com/ee/api/project_vulnerabilities.html)
+  - [Group Variables](https://docs.gitlab.com/ee/api/group_level_variables.html)
+  - [Project Variables](https://docs.gitlab.com/ee/api/project_level_variables.html)
 - Outputs the schema for each resource
 - Incrementally pulls data based on the input state
 
