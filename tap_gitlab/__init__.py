@@ -23,7 +23,9 @@ CONFIG = {
     'groups': '',
     'ultimate_license': False,
     'fetch_merge_request_commits': False,
-    'fetch_pipelines_extended': False
+    'fetch_pipelines_extended': False,
+    'fetch_group_variables': False,
+    'fetch_project_variables': False
 }
 STATE = {}
 CATALOG = None
@@ -206,7 +208,12 @@ RESOURCES = {
 }
 
 ULTIMATE_RESOURCES = ("epics", "epic_issues")
-STREAM_CONFIG_SWITCHES = ('merge_request_commits', 'pipelines_extended')
+STREAM_CONFIG_SWITCHES = (
+    'merge_request_commits',
+    'pipelines_extended',
+    'group_variables',
+    'project_variables',
+)
 
 LOGGER = singer.get_logger()
 SESSION = requests.Session()
@@ -921,6 +928,8 @@ def main_impl():
     CONFIG['ultimate_license'] = truthy(CONFIG['ultimate_license'])
     CONFIG['fetch_merge_request_commits'] = truthy(CONFIG['fetch_merge_request_commits'])
     CONFIG['fetch_pipelines_extended'] = truthy(CONFIG['fetch_pipelines_extended'])
+    CONFIG['fetch_group_variables'] = truthy(CONFIG['fetch_group_variables'])
+    CONFIG['fetch_project_variables'] = truthy(CONFIG['fetch_project_variables'])
 
     if '/api/' not in CONFIG['api_url']:
         CONFIG['api_url'] += '/api/v4'
