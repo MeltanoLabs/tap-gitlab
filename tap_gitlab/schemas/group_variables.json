@@ -1,0 +1,26 @@
+{
+    "type": "object",
+    "properties": {
+        "group_id": {
+            "type": ["null", "integer"]
+        },
+        "variable_type": {
+            "type": ["null", "string"]
+        },
+        "key": {
+            "type": ["null", "string"]
+        },
+        "value": {
+            "type": ["null", "string"]
+        },
+        "protected": {
+            "type": ["null", "boolean"]
+        },
+        "masked": {
+            "type": ["null", "boolean"]
+        },
+        "environment_scope": {
+            "type": ["null", "string"]
+        }
+    }
+}
