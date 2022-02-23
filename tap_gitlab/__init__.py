@@ -25,7 +25,7 @@ CONFIG = {
     'fetch_merge_request_commits': False,
     'fetch_pipelines_extended': False,
     'fetch_group_variables': False,
-    'fetch_project_variables': False
+    'fetch_project_variables': False,
 }
 STATE = {}
 CATALOG = None
@@ -197,13 +197,13 @@ RESOURCES = {
         'url': '/projects/{id}/variables',
         'schema': load_schema('project_variables'),
         'key_properties': ['project_id', 'key'],
-        'replication_method': 'FULL_TABLE'
+        'replication_method': 'FULL_TABLE',
     },
     'group_variables': {
         'url': '/groups/{id}/variables',
         'schema': load_schema('group_variables'),
         'key_properties': ['group_id', 'key'],
-        'replication_method': 'FULL_TABLE'
+        'replication_method': 'FULL_TABLE',
     }
 }
 
