@@ -1,15 +1,19 @@
 """REST client handling, including GitLabStream base class."""
 
-import requests
+from __future__ import annotations
+
 from pathlib import Path
-from typing import Any, Dict, Optional, Union, List, Iterable
 
-from memoization import cached
+from typing import Any, Dict, List, cast, Optional
 
-from singer_sdk.helpers.jsonpath import extract_jsonpath
 from singer_sdk.streams import RESTStream
 from singer_sdk.authenticators import APIKeyAuthenticator
 
+
+API_TOKEN_KEY = "Private-Token"
+API_TOKEN_SETTING_NAME = "private_token"
+
+DEFAULT_API_URL = "https://gitlab.com/api/v4"
 
 SCHEMAS_DIR = Path(__file__).parent / Path("./schemas")
 
@@ -17,16 +21,13 @@ SCHEMAS_DIR = Path(__file__).parent / Path("./schemas")
 class GitLabStream(RESTStream):
     """GitLab stream class."""
 
-    url_base = "https://gitlab.com/api/v4"
+    records_jsonpath = "$[*]"
+    next_page_token_jsonpath = "$.X-Next-Page"
 
-    # OR use a dynamic url_base:
-    # @property
-    # def url_base(self) -> str:
-    #     """Return the API URL root, configurable via tap settings."""
-    #     return self.config["api_url"]
-
-    records_jsonpath = "$[*]"  # Or override `parse_response`.
-    next_page_token_jsonpath = "$.next_page"  # Or override `get_next_page_token`.
+    @property
+    def url_base(self) -> str:
+        """Return the API URL root, configurable via tap settings."""
+        return self.config.get("api_url", DEFAULT_API_URL)
 
     @property
     def schema_filepath(self) -> Path:
@@ -37,9 +38,9 @@ class GitLabStream(RESTStream):
         """Return a new authenticator object."""
         return APIKeyAuthenticator.create_for_stream(
             self,
-            key="x-api-key",
-            value=self.config.get("private_token"),
-            location="header"
+            key=API_TOKEN_KEY,
+            value=self.config[API_TOKEN_SETTING_NAME],
+            location="header",
         )
 
     @property
@@ -48,27 +49,7 @@ class GitLabStream(RESTStream):
         headers = {}
         if "user_agent" in self.config:
             headers["User-Agent"] = self.config.get("user_agent")
-        # If not using an authenticator, you may also provide inline auth headers:
-        # headers["Private-Token"] = self.config.get("auth_token")
         return headers
-
-    def get_next_page_token(
-        self, response: requests.Response, previous_token: Optional[Any]
-    ) -> Optional[Any]:
-        """Return a token for identifying next page or None if no more pages."""
-        # TODO: If pagination is required, return a token which can be used to get the
-        #       next page. If this is the final page, return "None" to end the
-        #       pagination loop.
-        if self.next_page_token_jsonpath:
-            all_matches = extract_jsonpath(
-                self.next_page_token_jsonpath, response.json()
-            )
-            first_match = next(iter(all_matches), None)
-            next_page_token = first_match
-        else:
-            next_page_token = response.headers.get("X-Next-Page", None)
-
-        return next_page_token
 
     def get_url_params(
         self, context: Optional[dict], next_page_token: Optional[Any]
@@ -82,22 +63,29 @@ class GitLabStream(RESTStream):
             params["order_by"] = self.replication_key
         return params
 
-    def prepare_request_payload(
-        self, context: Optional[dict], next_page_token: Optional[Any]
-    ) -> Optional[dict]:
-        """Prepare the data payload for the REST API request.
 
-        By default, no payload will be sent (return None).
-        """
-        # TODO: Delete this method if no payload is required. (Most REST APIs.)
-        return None
+class ProjectBasedStream(GitLabStream):
+    """Base class for streams that are keys based on project ID."""
 
-    def parse_response(self, response: requests.Response) -> Iterable[dict]:
-        """Parse the response and return an iterator of result rows."""
-        # TODO: Parse response body and return a set of records.
-        yield from extract_jsonpath(self.records_jsonpath, input=response.json())
+    @property
+    def partitions(self) -> List[dict]:
+        """Return a list of partition key dicts (if applicable), otherwise None."""
+        if "{project_id}" in self.path:
+            return [
+                {"project_id": id} for id in cast(list, self.config.get("project_ids"))
+            ]
 
-    def post_process(self, row: dict, context: Optional[dict]) -> dict:
-        """As needed, append or transform raw data to match expected structure."""
-        # TODO: Delete this method if not needed.
-        return row
+        if "{group_id}" in self.path:
+            if "group_ids" not in self.config:
+                raise ValueError(
+                    f"Missing `group_ids` setting which is required for the "
+                    f"'{self.name}' stream."
+                )
+
+            return [{"group_id": id} for id in cast(list, self.config.get("group_ids"))]
+
+        raise ValueError(
+            "Could not detect partition type for Gitlab stream "
+            f"'{self.name}' ({self.path}). "
+            "Expected a URL path containing '{project_id}' or '{group_id}'. "
+        )

@@ -2,6 +2,8 @@
 
 import requests_cache
 
+from tap_gitlab.client import API_TOKEN_KEY
+
 
 def setup_requests_cache(tap_config: dict) -> None:
     cache_path_root = tap_config.get("requests_cache_path", None)
@@ -17,5 +19,5 @@ def setup_requests_cache(tap_config: dict) -> None:
         serializer="yaml",
         expire_after=24 * 60 * 60,
         # Important: make sure that API keys don't end up being cached:
-        ignored_parameters=["x-api-key"],
+        ignored_parameters=[API_TOKEN_KEY],
     )
