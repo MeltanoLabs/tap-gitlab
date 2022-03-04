@@ -78,14 +78,21 @@ class ProjectBasedStream(GitLabStream):
     def partitions(self) -> List[dict]:
         """Return a list of partition key dicts (if applicable), otherwise None."""
         if "{project_id}" in self.path:
+            if "projects" not in self.config:
+                raise ValueError(
+                    f"Missing `projects` setting which is required for the "
+                    f"'{self.name}' stream."
+                )
+
             return [
-                {"project_id": id} for id in cast(list, self.config.get("project_ids"))
+                {"project_id": id}
+                for id in cast(list, self.config["projects"].split(" "))
             ]
 
         if "{group_id}" in self.path:
-            if "group_ids" not in self.config:
+            if "groups" not in self.config:
                 raise ValueError(
-                    f"Missing `group_ids` setting which is required for the "
+                    f"Missing `groups` setting which is required for the "
                     f"'{self.name}' stream."
                 )
 
