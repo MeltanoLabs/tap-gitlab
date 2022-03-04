@@ -24,6 +24,8 @@ class GitLabStream(RESTStream):
 
     records_jsonpath = "$[*]"
     next_page_token_jsonpath = "$.X-Next-Page"
+    extra_url_params: dict = {}
+    bookmark_param_name = "since"
 
     @property
     def url_base(self) -> str:
@@ -31,8 +33,12 @@ class GitLabStream(RESTStream):
         return self.config.get("api_url", DEFAULT_API_URL)
 
     @property
+    def schema_filename(self) -> str:
+        return f"{self.name}.json"
+
+    @property
     def schema_filepath(self) -> Path:
-        return SCHEMAS_DIR / f"{self.name}.json"
+        return SCHEMAS_DIR / self.schema_filename
 
     @property
     def authenticator(self) -> APIKeyAuthenticator:
@@ -56,12 +62,17 @@ class GitLabStream(RESTStream):
         self, context: Optional[dict], next_page_token: Optional[Any]
     ) -> Dict[str, Any]:
         """Return a dictionary of values to be used in URL parameterization."""
-        params: dict = {}
+        # If the class has extra default params, start with those:
+        params: dict = self.extra_url_params
+
         if next_page_token:
             params["page"] = next_page_token
         if self.replication_key:
             params["sort"] = "asc"
             params["order_by"] = self.replication_key
+            if self.is_timestamp_replication_key:
+                params[self.bookmark_param_name] = self.get_starting_timestamp(context)
+
         return params
 
     def get_next_page_token(
