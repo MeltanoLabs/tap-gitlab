@@ -2,8 +2,10 @@
 **/.secrets/*
 
 # Ignore meltano internal cache and sqlite systemdb
-
 .meltano/
+
+# For now, ignore SQLite files requests cache since those cannot be inspected by diffs
+*.sqlite
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

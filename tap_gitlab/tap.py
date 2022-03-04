@@ -4,6 +4,8 @@ from typing import List
 
 from singer_sdk import Tap, Stream
 from singer_sdk import typing as th  # JSON schema typing helpers
+
+from tap_gitlab.caching import setup_requests_cache
 from tap_gitlab.streams import (
     # TODO: Import your custom stream types here:
     GitLabStream,
@@ -84,8 +86,32 @@ class TapGitLab(Tap):
             description="TODO",
             default=False,
         ),
+        th.Property(
+            "requests_cache_path",
+            th.StringType,
+            required=False,
+            description=(
+                "(Optional.) Specifies the directory of API request caches."
+                "When this is set, the cache will be used before calling to "
+                "the external API endpoint. If set and "
+                "`requests_recording_enabled` is `True`, then API data will also be "
+                "recorded as it is received."
+            ),
+        ),
+        # TODO:
+        # th.Property(
+        #     "requests_recording_enabled",
+        #     th.BooleanType,
+        #     required=False,
+        #     description=(
+        #         "Set to `True` to enable recording to the requests cache. "
+        #         "This setting is ignored if `requests_cache_path` is not set."
+        #     ),
+        #     default=False,
+        # )
     ).to_dict()
 
     def discover_streams(self) -> List[Stream]:
         """Return a list of discovered streams."""
+        setup_requests_cache(self.config)
         return [stream_class(tap=self) for stream_class in STREAM_TYPES]
