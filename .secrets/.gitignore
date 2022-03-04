@@ -1,0 +1,6 @@
+# Only templates and this gitignore file
+# will be commited to source control.
+
+*.*
+!.gitignore
+!*.template
