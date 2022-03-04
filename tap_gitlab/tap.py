@@ -22,30 +22,70 @@ class TapGitLab(Tap):
     """GitLab tap class."""
     name = "tap-gitlab"
 
-    # TODO: Update this section with the actual config values you expect:
     config_jsonschema = th.PropertiesList(
         th.Property(
-            "auth_token",
+            "api_url",
             th.StringType,
-            required=True,
-            description="The token to authenticate against the API service"
+            required=False,
+            description="Overrides the base URL.",
         ),
         th.Property(
-            "project_ids",
-            th.ArrayType(th.StringType),
+            "private_token",
+            th.StringType,
             required=True,
-            description="Project IDs to replicate"
+            description="TODO",
+        ),
+        th.Property(
+            "groups",
+            th.StringType,
+            required=False,
+            description="TODO",
+        ),
+        th.Property(
+            "projects",
+            th.StringType,
+            required=False,
+            description="TODO",
         ),
         th.Property(
             "start_date",
             th.DateTimeType,
-            description="The earliest record date to sync"
+            required=False,
+            description="TODO",
         ),
         th.Property(
-            "api_url",
-            th.StringType,
-            default="https://api.mysample.com",
-            description="The url for the API service"
+            "ultimate_license",
+            th.BooleanType,
+            required=False,
+            description="TODO",
+        ),
+        th.Property(
+            "fetch_merge_request_commits",
+            th.BooleanType,
+            required=False,
+            description="TODO",
+            default=False,
+        ),
+        th.Property(
+            "fetch_pipelines_extended",
+            th.BooleanType,
+            required=False,
+            description="TODO",
+            default=False,
+        ),
+        th.Property(
+            "fetch_group_variables",
+            th.BooleanType,
+            required=False,
+            description="TODO",
+            default=False,
+        ),
+        th.Property(
+            "fetch_project_variables",
+            th.BooleanType,
+            required=False,
+            description="TODO",
+            default=False,
         ),
     ).to_dict()
 
