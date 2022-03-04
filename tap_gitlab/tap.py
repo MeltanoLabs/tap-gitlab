@@ -117,26 +117,20 @@ class TapGitLab(Tap):
             description=(
                 "(Optional.) Specifies the directory of API request caches."
                 "When this is set, the cache will be used before calling to "
-                "the external API endpoint. If set and "
-                "`requests_recording_enabled` is `True`, then API data will also be "
-                "recorded as it is received."
+                "the external API endpoint. Any data not already cached will be "
+                "recorded to this path as it is received."
             ),
         ),
-        # TODO:
-        # th.Property(
-        #     "requests_recording_enabled",
-        #     th.BooleanType,
-        #     required=False,
-        #     description=(
-        #         "Set to `True` to enable recording to the requests cache. "
-        #         "This setting is ignored if `requests_cache_path` is not set."
-        #     ),
-        #     default=False,
-        # )
     ).to_dict()
 
     def discover_streams(self) -> List[Stream]:
-        """Return a list of discovered streams."""
+        """Return a list of discovered streams.
+
+        The list of classes is generated automatically based on introspection.
+
+        If any streams are disabled in settings, they will not be exposed here during
+        discovery.
+        """
         setup_requests_cache(dict(self.config))
 
         stream_types: List[type] = []

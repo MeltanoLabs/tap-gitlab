@@ -17,16 +17,17 @@ Built with the [Meltano SDK](https://sdk.meltano.com) for Singer Taps and Target
 
 | Setting                    | Required | Default | Description |
 |:---------------------------|:--------:|:-------:|:------------|
-| api_url                    | False    | None    | Overrides the base URL. |
-| private_token              | True     | None    | TODO        |
-| groups                     | False    | None    | TODO        |
-| projects                   | False    | None    | TODO        |
-| start_date                 | False    | None    | TODO        |
-| ultimate_license           | False    | None    | TODO        |
-| fetch_merge_request_commits| False    | None    | TODO        |
-| fetch_pipelines_extended   | False    | None    | TODO        |
-| fetch_group_variables      | False    | None    | TODO        |
-| fetch_project_variables    | False    | None    | TODO        |
+| api_url                    | False    | None    | Optionally overrides the default base URL for the Gitlab API. |
+| private_token              | True     | None    | An access token to use when calling to the Gitlab API. |
+| groups                     | False    | None    | A space delimited list of group ids, e.g. 'orgname1 orgname2 orgname3' |
+| projects                   | False    | None    | A space delimited list of project ids, e.g. 'orgname/projectname1 orgname/projectname2 |
+| start_date                 | False    | None    | Optional. If provided, this is the furthest date for which data will be retrieved. |
+| ultimate_license           | False    | None    | If not set to 'true', the following streams will be ignored: 'epics' and 'epic_issues'. |
+| fetch_merge_request_commits| False    | None    | If not set to 'true', the 'merge_request_commits' stream will be ignored. |
+| fetch_pipelines_extended   | False    | None    | If not set to 'true', the 'pipelines_extended' stream will be ignored. |
+| fetch_group_variables      | False    | None    | If not set to 'true', the 'group_variables' stream will be ignored. |
+| fetch_project_variables    | False    | None    | If not set to 'true', the 'project_variables' stream will be ignored. |
+| requests_cache_path        | False    | None    | (Optional.) Specifies the directory of API request caches.When this is set, the cache will be used before calling to the external API endpoint. Any data not already cached will be recorded to this path as it is received. |
 | stream_maps                | False    | None    | Config object for stream maps capability. |
 | stream_map_config          | False    | None    | User-defined config values to be used within map expressions. |
 | flattening_enabled         | False    | None    | 'True' to enable schema flattening and automatically expand nested properties. |
