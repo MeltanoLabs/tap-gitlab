@@ -1,3 +1,39 @@
+# `tap-gitlab`
+
+GitLab tap class.
+
+Built with the [Meltano SDK](https://sdk.meltano.com) for Singer Taps and Targets.
+
+## Capabilities
+
+* `catalog`
+* `state`
+* `discover`
+* `about`
+* `stream-maps`
+* `schema-flattening`
+
+## Settings
+
+| Setting                    | Required | Default | Description |
+|:---------------------------|:--------:|:-------:|:------------|
+| api_url                    | False    | None    | Overrides the base URL. |
+| private_token              | True     | None    | TODO        |
+| groups                     | False    | None    | TODO        |
+| projects                   | False    | None    | TODO        |
+| start_date                 | False    | None    | TODO        |
+| ultimate_license           | False    | None    | TODO        |
+| fetch_merge_request_commits| False    | None    | TODO        |
+| fetch_pipelines_extended   | False    | None    | TODO        |
+| fetch_group_variables      | False    | None    | TODO        |
+| fetch_project_variables    | False    | None    | TODO        |
+| stream_maps                | False    | None    | Config object for stream maps capability. |
+| stream_map_config          | False    | None    | User-defined config values to be used within map expressions. |
+| flattening_enabled         | False    | None    | 'True' to enable schema flattening and automatically expand nested properties. |
+| flattening_max_depth       | False    | None    | The max depth to flatten schemas. |
+
+A full list of supported settings and capabilities is available by running: `tap-gitlab --about`
+
 # tap-gitlab
 
 `tap-gitlab` is a Singer tap for GitLab.

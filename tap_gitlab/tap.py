@@ -4,17 +4,14 @@ from typing import List
 
 from singer_sdk import Tap, Stream
 from singer_sdk import typing as th  # JSON schema typing helpers
-# TODO: Import your custom stream types here:
 from tap_gitlab.streams import (
+    # TODO: Import your custom stream types here:
     GitLabStream,
-    UsersStream,
-    GroupsStream,
+    ProjectsStream,
 )
-# TODO: Compile a list of custom stream types here
-#       OR rewrite discover_streams() below with your custom logic.
 STREAM_TYPES = [
-    UsersStream,
-    GroupsStream,
+    # TODO: Compile a list of custom stream types here:
+    ProjectsStream,
 ]
 
 
