@@ -29,12 +29,16 @@ class GitLabStream(RESTStream):
     next_page_token_jsonpath = "$.next_page"  # Or override `get_next_page_token`.
 
     @property
+    def schema_filepath(self) -> Path:
+        return SCHEMAS_DIR / f"{self.name}.json"
+
+    @property
     def authenticator(self) -> APIKeyAuthenticator:
         """Return a new authenticator object."""
         return APIKeyAuthenticator.create_for_stream(
             self,
             key="x-api-key",
-            value=self.config.get("api_key"),
+            value=self.config.get("private_token"),
             location="header"
         )
 
