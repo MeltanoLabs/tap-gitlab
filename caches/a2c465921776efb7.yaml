@@ -362,7 +362,6 @@ request:
     Accept-Encoding: gzip, deflate
     Connection: keep-alive
     User-Agent: python-requests/2.27.1
-    x-api-key: glpat-dBrE5gsM9TP7uoWEstx9
   method: GET
   url: https://gitlab.com/api/v4/projects?sort=asc&order_by=last_activity_at
 status_code: 200
