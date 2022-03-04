@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import requests
 from pathlib import Path
 
 from typing import Any, Dict, List, cast, Optional
@@ -62,6 +63,12 @@ class GitLabStream(RESTStream):
             params["sort"] = "asc"
             params["order_by"] = self.replication_key
         return params
+
+    def get_next_page_token(
+        self, response: requests.Response, previous_token: Optional[Any]
+    ) -> Optional[Any]:
+        """Return token for identifying next page or None if not applicable."""
+        return response.headers.get("X-Next-Page", None)
 
 
 class ProjectBasedStream(GitLabStream):
