@@ -10,15 +10,42 @@ plugins:
     - state
     - catalog
     - discover
+    - about
+    - stream-maps
+    - schema-flattening
     config:
       start_date: '2010-01-01T00:00:00Z'
     settings:
     # TODO: To configure using Meltano, declare settings and their types here:
-    - name: username
-    - name: password
+    - name: api_url
+      kind: string
+    - name: private_token
       kind: password
+    - name: groups
+      kind: string
+    - name: projects
+      kind: string
     - name: start_date
-      value: '2010-01-01T00:00:00Z'
+      kind: date_iso8601
+    - name: ultimate_license
+      kind: boolean
+    - name: fetch_merge_request_commits
+      kind: boolean
+    - name: fetch_pipelines_extended
+      kind: boolean
+    - name: fetch_group_variables
+      kind: boolean
+    - name: fetch_project_variables
+      kind: boolean
+    - name: stream_maps
+      kind: object
+    - name: stream_map_config
+      kind: object
+    - name: flattening_enabled
+      kind: boolean
+    - name: flattening_max_depth
+      kind: integer
+    
   loaders:
   - name: target-jsonl
     variant: andyh1203
