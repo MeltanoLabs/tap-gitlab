@@ -7,6 +7,9 @@
 # For now, ignore SQLite files requests cache since those cannot be inspected by diffs
 *.sqlite
 
+# For now, ignore cache files until we have a good test project with no confidential issues
+caches
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
