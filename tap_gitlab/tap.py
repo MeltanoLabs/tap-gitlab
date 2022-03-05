@@ -7,16 +7,18 @@ from singer_sdk import Tap, Stream
 from singer_sdk import typing as th  # JSON schema typing helpers
 
 from tap_gitlab.caching import setup_requests_cache
+from tap_gitlab.client import GroupBasedStream
 from tap_gitlab.streams import GitLabStream, ProjectBasedStream
 from tap_gitlab import streams
 
-OPTIN_CLASS_NAMES = [
+OPTIN_STREAM_NAMES = [
     "merge_request_commits",
     "pipelines_extended",
     "group_variables",
     "project_variables",
+    "site_users",
 ]
-ULTIMATE_LICENSE_CLASS_NAMES = ["epics", "epic_issues"]
+ULTIMATE_LICENSE_STREAM_NAMES = ["epics", "epic_issues"]
 
 
 class TapGitLab(Tap):
@@ -111,6 +113,15 @@ class TapGitLab(Tap):
             default=False,
         ),
         th.Property(
+            "fetch_site_users",
+            th.BooleanType,
+            required=False,
+            description=(
+                "Unless set to 'false', the global 'site_users' stream will be include."
+            ),
+            default=True,
+        ),
+        th.Property(
             "requests_cache_path",
             th.StringType,
             required=False,
@@ -135,24 +146,35 @@ class TapGitLab(Tap):
 
         stream_types: List[type] = []
         for class_name, module_class in inspect.getmembers(streams, inspect.isclass):
-            class_name = module_class.__name__
-            if not issubclass(module_class, (GitLabStream, ProjectBasedStream)):
+            if not issubclass(module_class, (GitLabStream)):
                 continue  # Not a stream class.
 
-            if class_name in ["GitLabStream", "ProjectBasedStream"]:
+            if module_class in [GitLabStream, ProjectBasedStream, GroupBasedStream]:
                 continue  # Base classes, not streams.
 
+            stream_name = module_class.name
+
             if (
-                class_name in OPTIN_CLASS_NAMES
-                and not self.config[f"fetch_{class_name}"]
+                stream_name in OPTIN_STREAM_NAMES
+                and not self.config[f"fetch_{stream_name}"]
             ):
                 continue  # This is an "optin" class, and is not opted in.
 
             if (
-                class_name in ULTIMATE_LICENSE_CLASS_NAMES
+                stream_name in ULTIMATE_LICENSE_STREAM_NAMES
                 and not self.config["ultimate_license"]
             ):
                 continue  # This is an ultimate license class and will be skipped.
+
+            if issubclass(module_class, (ProjectBasedStream)) and not self.config.get(
+                "projects", None
+            ):
+                continue  # No project IDs provided.
+
+            if issubclass(module_class, (GroupBasedStream)) and not self.config.get(
+                "groups", None
+            ):
+                continue  # No group IDs provided.
 
             stream_types.append(module_class)
 

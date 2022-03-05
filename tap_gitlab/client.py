@@ -100,6 +100,19 @@ class ProjectBasedStream(GitLabStream):
                 for id in cast(list, self.config["projects"].split(" "))
             ]
 
+        raise ValueError(
+            "Could not detect partition type for Gitlab stream "
+            f"'{self.name}' ({self.path}). "
+            "Expected a URL path containing '{project_id}' or '{group_id}'. "
+        )
+
+
+class GroupBasedStream(GitLabStream):
+    """Base class for streams that are keys based on group ID."""
+
+    @property
+    def partitions(self) -> List[dict]:
+        """Return a list of partition key dicts (if applicable), otherwise None."""
         if "{group_id}" in self.path:
             if "groups" not in self.config:
                 raise ValueError(
@@ -107,7 +120,9 @@ class ProjectBasedStream(GitLabStream):
                     f"'{self.name}' stream."
                 )
 
-            return [{"group_id": id} for id in cast(list, self.config.get("group_ids"))]
+            return [
+                {"group_id": id} for id in cast(list, self.config["groups"].split(" "))
+            ]
 
         raise ValueError(
             "Could not detect partition type for Gitlab stream "
