@@ -27,6 +27,7 @@ Built with the [Meltano SDK](https://sdk.meltano.com) for Singer Taps and Target
 | fetch_pipelines_extended   | False    | None    | If not set to 'true', the 'pipelines_extended' stream will be ignored. |
 | fetch_group_variables      | False    | None    | If not set to 'true', the 'group_variables' stream will be ignored. |
 | fetch_project_variables    | False    | None    | If not set to 'true', the 'project_variables' stream will be ignored. |
+| fetch_site_users           | False    | None    | Unless set to 'false', the 'site_users' stream will be included. |
 | requests_cache_path        | False    | None    | (Optional.) Specifies the directory of API request caches.When this is set, the cache will be used before calling to the external API endpoint. Any data not already cached will be recorded to this path as it is received. |
 | stream_maps                | False    | None    | Config object for stream maps capability. |
 | stream_map_config          | False    | None    | User-defined config values to be used within map expressions. |
