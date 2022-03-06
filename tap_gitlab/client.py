@@ -85,6 +85,8 @@ class GitLabStream(RESTStream):
 class ProjectBasedStream(GitLabStream):
     """Base class for streams that are keys based on project ID."""
 
+    state_partitioning_keys = ["project_path"]
+
     @property
     def partitions(self) -> List[dict]:
         """Return a list of partition key dicts (if applicable), otherwise None."""
@@ -109,6 +111,8 @@ class ProjectBasedStream(GitLabStream):
 
 class GroupBasedStream(GitLabStream):
     """Base class for streams that are keys based on group ID."""
+
+    state_partitioning_keys = ["group_path"]
 
     @property
     def partitions(self) -> List[dict]:
