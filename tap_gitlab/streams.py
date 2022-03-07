@@ -26,6 +26,13 @@ class ProjectsStream(ProjectBasedStream):
         result["owner_id"] = pop_nested_id(result, "owner")
         return result
 
+    def get_child_context(self, record: dict, context: Optional[dict]) -> dict:
+        assert context is not None
+        return {
+            "project_id": record["id"],
+            "project_path": context["project_path"],
+        }
+
 
 class IssuesStream(ProjectBasedStream):
     """Gitlab Issues stream."""
@@ -102,6 +109,20 @@ class BranchesStream(ProjectBasedStream):
     name = "branches"
     path = "/projects/{project_path}/repository/branches"
     primary_keys = ["project_id", "name"]
+    # TODO: Research why this fails:
+    # parent_stream_type = ProjectsStream
+
+    def post_process(self, row: dict, context: Optional[dict] = None) -> Optional[dict]:
+        result = super().post_process(row, context)
+        if result is None:
+            return None
+
+        assert context is not None
+
+        # TODO: Uncomment when parent relationship works
+        # result["project_id"] = context["project_id"]
+        result["commit_id"] = pop_nested_id(result, "commit")
+        return result
 
 
 class PipelinesStream(ProjectBasedStream):
