@@ -117,7 +117,8 @@ class TapGitLab(Tap):
             th.BooleanType,
             required=False,
             description=(
-                "Unless set to 'false', the global 'site_users' stream will be include."
+                "Unless set to 'false', the global 'site_users' stream will be "
+                "included."
             ),
             default=True,
         ),
