@@ -74,6 +74,9 @@ Notes on group and project options:
 
 - If `fetch_project_variables` is true (defaults to false), then Project-level CI/CD variables will be retrieved for each available / specified project. This feature is treated as an opt-in to prevent users from accidentally extracting any potential secrets stored as Project-level CI/CD variables.
 
+- If using the `--test=schema` option, some value (which is ignored) must be provided for the `projects` or `groups`
+  settings or none of the corresponding streams will be included in the output.
+
 ## Installation
 
 ```bash
