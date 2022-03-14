@@ -154,15 +154,13 @@ class TapGitLab(Tap):
 
             stream_name = module_class.name
 
-            if (
-                stream_name in OPTIN_STREAM_NAMES
-                and not self.config[f"fetch_{stream_name}"]
+            if stream_name in OPTIN_STREAM_NAMES and not self.config.get(
+                f"fetch_{stream_name}", False
             ):
                 continue  # This is an "optin" class, and is not opted in.
 
-            if (
-                stream_name in ULTIMATE_LICENSE_STREAM_NAMES
-                and not self.config["ultimate_license"]
+            if stream_name in ULTIMATE_LICENSE_STREAM_NAMES and not self.config.get(
+                "ultimate_license", False
             ):
                 continue  # This is an ultimate license class and will be skipped.
 
