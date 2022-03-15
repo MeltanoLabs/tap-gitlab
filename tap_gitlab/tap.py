@@ -3,13 +3,13 @@
 import inspect
 from typing import List
 
-from singer_sdk import Tap, Stream
+from singer_sdk import Stream, Tap
 from singer_sdk import typing as th  # JSON schema typing helpers
 
+from tap_gitlab import streams
 from tap_gitlab.caching import setup_requests_cache
 from tap_gitlab.client import GroupBasedStream
 from tap_gitlab.streams import GitLabStream, ProjectBasedStream
-from tap_gitlab import streams
 
 OPTIN_STREAM_NAMES = [
     "merge_request_commits",
@@ -55,6 +55,15 @@ class TapGitLab(Tap):
             description=(
                 "A space delimited list of project ids, e.g. "
                 "'orgname/projectname1 orgname/projectname2"
+            ),
+        ),
+        th.Property(
+            "include_license_info_for_projects",
+            th.BooleanType,
+            required=False,
+            description=(
+                "Optional. If true, projects will include license information"
+                "(defaults to false)"
             ),
         ),
         th.Property(

@@ -30,13 +30,13 @@ class ProjectsStream(ProjectBasedStream):
     replication_key = "last_activity_at"
     is_sorted = True
     extra_url_params = {"statistics": 1}
+    schema_filepath = None  # to allow the use of schema below
 
     def post_process(self, row: dict, context: Optional[dict] = None) -> Optional[dict]:
         result = super().post_process(row, context)
         if result is None:
             return None
 
-        result["owner_id"] = pop_nested_id(result, "owner")
         return result
 
     def get_child_context(self, record: dict, context: Optional[dict]) -> dict:
@@ -45,6 +45,77 @@ class ProjectsStream(ProjectBasedStream):
             "project_id": record["id"],
             "project_path": context["project_path"],
         }
+
+    def get_url_params(
+        self, context: Optional[dict], next_page_token: Optional[Any]
+    ) -> Dict[str, Any]:
+        """
+        Return a dictionary of values to be used in URL parameterization.
+        Projects endpoint can include license info if explicitly requested.
+        """
+        params = super().get_url_params(context, next_page_token)
+        if self.config.get("include_license_info_for_projects", False):
+            params["license"] = True
+        return params
+
+    schema = th.PropertiesList(  # type: ignore
+        th.Property("id", th.IntegerType),
+        th.Property("description", th.StringType),
+        th.Property("name", th.StringType),
+        th.Property("name_with_namespace", th.StringType),
+        th.Property("path", th.StringType),
+        th.Property("path_with_namespace", th.StringType),
+        th.Property("created_at", th.DateTimeType),
+        th.Property("default_branch", th.StringType),
+        # tag_list deprecated in favour of topics
+        # https://docs.gitlab.com/ee/api/projects.html
+        th.Property("tag_list", th.ArrayType(th.StringType)),
+        th.Property("topics", th.ArrayType(th.StringType)),
+        th.Property("ssh_url_to_repo", th.StringType),
+        th.Property("http_url_to_repo", th.StringType),
+        th.Property("web_url", th.StringType),
+        th.Property("readme_url", th.StringType),
+        th.Property("avatar_url", th.StringType),
+        th.Property("forks_count", th.IntegerType),
+        th.Property("star_count", th.IntegerType),
+        th.Property("last_activity_at", th.DateTimeType),
+        th.Property(
+            "namespace",
+            th.ObjectType(
+                th.Property("id", th.IntegerType),
+                th.Property("name", th.StringType),
+                th.Property("path", th.StringType),
+                th.Property("kind", th.StringType),
+                th.Property("full_path", th.StringType),
+                th.Property("parent_id", th.IntegerType),
+            ),
+        ),
+        th.Property("archived", th.BooleanType),
+        th.Property("visibility", th.StringType),
+        th.Property("visibility_level", th.IntegerType),
+        th.Property("open_issues_count", th.IntegerType),
+        th.Property("creator_id", th.IntegerType),
+        th.Property("public", th.BooleanType),
+        th.Property("public_builds", th.BooleanType),
+        th.Property("only_allow_merge_if_all_discussions_are_resolved", th.BooleanType),
+        th.Property("only_allow_merge_if_build_succeeds", th.BooleanType),
+        th.Property("request_access_enabled", th.BooleanType),
+        th.Property("issues_enabled", th.BooleanType),
+        th.Property("shared_runners_enabled", th.BooleanType),
+        th.Property("snippets_enabled", th.BooleanType),
+        th.Property("wiki_enabled", th.BooleanType),
+        th.Property("license_url", th.StringType),
+        th.Property(
+            "license",
+            th.ObjectType(
+                th.Property("key", th.StringType),
+                th.Property("name", th.StringType),
+                th.Property("nickname", th.StringType),
+                th.Property("html_url", th.StringType),
+                th.Property("source_url", th.StringType),
+            ),
+        ),
+    ).to_dict()
 
 
 class IssuesStream(ProjectBasedStream):
