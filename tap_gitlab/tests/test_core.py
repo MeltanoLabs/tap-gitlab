@@ -1,14 +1,16 @@
 """Tests standard tap features using the built-in SDK tests library."""
 
 import datetime
+import os
 
 from singer_sdk.testing import get_standard_tap_tests
 
 from tap_gitlab.tap import TapGitLab
 
 SAMPLE_CONFIG = {
-    "start_date": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d")
-    # TODO: Initialize minimal tap config
+    "start_date": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d"),
+    "private_token": os.getenv("GITLAB_PRIVATE_TOKEN"),
+    "projects": os.getenv("GITLAB_PROJECTS_TO_FETCH", ""),
 }
 
 
