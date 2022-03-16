@@ -79,6 +79,11 @@ class ProjectsStream(ProjectBasedStream):
         th.Property("forks_count", th.IntegerType),
         th.Property("star_count", th.IntegerType),
         th.Property("last_activity_at", th.DateTimeType),
+        # gitlab handles project owners differently depending on their types:
+        # "users" have both a namespace and owner object (note `id` values do not match)
+        # "groups" only have a namespace filled, and owner is empty. `namespace__id`
+        # can be passed to `/groups/:id` and return the expected group,
+        # but not to `/users/:id`.
         th.Property(
             "namespace",
             th.ObjectType(
@@ -90,6 +95,7 @@ class ProjectsStream(ProjectBasedStream):
                 th.Property("parent_id", th.IntegerType),
             ),
         ),
+        th.Property("owner", user_object),
         th.Property("archived", th.BooleanType),
         th.Property("visibility", th.StringType),
         th.Property("visibility_level", th.IntegerType),
