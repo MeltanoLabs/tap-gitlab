@@ -1,7 +1,8 @@
 """Stream type classes for tap-gitlab."""
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Iterable, Optional
 
+import requests
 from singer_sdk import typing as th  # JSON Schema typing helpers
 
 from tap_gitlab.client import GitLabStream, GroupBasedStream, ProjectBasedStream
@@ -121,6 +122,32 @@ class ProjectsStream(ProjectBasedStream):
                 th.Property("source_url", th.StringType),
             ),
         ),
+    ).to_dict()
+
+
+class LanguagesStream(ProjectBasedStream):
+    """Gitlab Languages stream for a project."""
+
+    # docs: https://docs.gitlab.com/ee/api/projects.html#languages
+    name = "languages"
+    path = "/projects/{project_path}/languages"
+    primary_keys = ["project_path", "language_name"]
+    schema_filepath = None  # to allow the use of schema below
+
+    def parse_response(self, response: requests.Response) -> Iterable[dict]:
+        """
+        Parse the language response and reformat to return as an
+        iterator of [{language_name: "Python", percent: 23.45}].
+        """
+        languages_json = response.json()
+        self.logger.warning(languages_json)
+        for key, value in languages_json.items():
+            yield {"language_name": key, "percent": value}
+
+    schema = th.PropertiesList(  # type: ignore
+        th.Property("project_path", th.StringType),
+        th.Property("language_name", th.StringType),
+        th.Property("percent", th.NumberType),
     ).to_dict()
 
 
