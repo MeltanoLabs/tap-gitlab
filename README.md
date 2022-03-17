@@ -2,6 +2,14 @@
 
 This is a [Singer](https://singer.io) tap that produces JSON-formatted data following the [Singer spec](https://github.com/singer-io/getting-started/blob/master/SPEC.md).
 
+## Important notice
+
+- This repository's default branch (`legacy-stable`) is kept for compatibility reasons but is no longer under active development.
+- New development is being performed against the `main` branch, which is based on a port to the Meltano SDK in Pull Request #65.
+- For a stable experience, users of this tap should begin pinning their installations to a specific [release](https://github.com/MeltanoLabs/tap-gitlab/releases) instead of branch references. More instructions are provided within the `README.md` of the `main` branch.
+
+## About this tap
+
 It is based on v0.5.1 of <https://github.com/singer-io/tap-gitlab>, but contains [many additional improvements](./CHANGELOG.md).
 
 This tap:
