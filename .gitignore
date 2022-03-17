@@ -98,3 +98,4 @@ config.json
 state.json
 catalog.json
 .autoenv.zsh
+.vscode
