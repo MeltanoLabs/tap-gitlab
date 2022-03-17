@@ -28,11 +28,11 @@ Built with the [Meltano SDK](https://sdk.meltano.com) for Singer Taps and Target
 | groups                     | False    | None    | A space delimited list of group ids, e.g. 'orgname1 orgname2 orgname3' |
 | projects                   | False    | None    | A space delimited list of project ids, e.g. 'orgname/projectname1 orgname/projectname2 |
 | start_date                 | False    | None    | Optional. If provided, this is the furthest date for which data will be retrieved. |
-| ultimate_license           | False    | None    | If not set to 'true', the following streams will be ignored: 'epics' and 'epic_issues'. |
-| fetch_merge_request_commits| False    | None    | If not set to 'true', the 'merge_request_commits' stream will be ignored. |
-| fetch_pipelines_extended   | False    | None    | If not set to 'true', the 'pipelines_extended' stream will be ignored. |
-| fetch_group_variables      | False    | None    | If not set to 'true', the 'group_variables' stream will be ignored. |
-| fetch_project_variables    | False    | None    | If not set to 'true', the 'project_variables' stream will be ignored. |
+| ultimate_license           | False    | False   | If not set to 'true', the following streams will be ignored: 'epics' and 'epic_issues'. |
+| fetch_merge_request_commits| False    | False   | If not set to 'true', the 'merge_request_commits' stream will be ignored. |
+| fetch_pipelines_extended   | False    | False   | If not set to 'true', the 'pipelines_extended' stream will be ignored. |
+| fetch_group_variables      | False    | False   | If not set to 'true', the 'group_variables' stream will be ignored. |
+| fetch_project_variables    | False    | False   | If not set to 'true', the 'project_variables' stream will be ignored. |
 | fetch_site_users           | False    | None    | Unless set to 'false', the 'site_users' stream will be included. |
 | requests_cache_path        | False    | None    | (Optional.) Specifies the directory of API request caches.When this is set, the cache will be used before calling to the external API endpoint. Any data not already cached will be recorded to this path as it is received. |
 | stream_maps                | False    | None    | Config object for stream maps capability. |
@@ -79,6 +79,9 @@ Notes on group and project options:
 - If `fetch_group_variables` is true (defaults to false), then Group-level CI/CD variables will be retrieved for each available / specified group. This feature is treated as an opt-in to prevent users from accidentally extracting any potential secrets stored as Group-level CI/CD variables.
 
 - If `fetch_project_variables` is true (defaults to false), then Project-level CI/CD variables will be retrieved for each available / specified project. This feature is treated as an opt-in to prevent users from accidentally extracting any potential secrets stored as Project-level CI/CD variables.
+
+- If using the `--test=schema` option, some value (which is ignored) must be provided for the `projects` or `groups`
+  settings or none of the corresponding streams will be included in the output.
 
 ## Installation
 
