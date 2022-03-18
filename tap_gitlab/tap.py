@@ -3,13 +3,13 @@
 import inspect
 from typing import List
 
-from singer_sdk import Tap, Stream
+from singer_sdk import Stream, Tap
 from singer_sdk import typing as th  # JSON schema typing helpers
 
+from tap_gitlab import streams
 from tap_gitlab.caching import setup_requests_cache
 from tap_gitlab.client import GroupBasedStream
 from tap_gitlab.streams import GitLabStream, ProjectBasedStream
-from tap_gitlab import streams
 
 OPTIN_STREAM_NAMES = [
     "merge_request_commits",

@@ -2,14 +2,12 @@
 
 from __future__ import annotations
 
-import requests
 from pathlib import Path
+from typing import Any, Dict, List, Optional, cast
 
-from typing import Any, Dict, List, cast, Optional
-
-from singer_sdk.streams import RESTStream
+import requests
 from singer_sdk.authenticators import APIKeyAuthenticator
-
+from singer_sdk.streams import RESTStream
 
 API_TOKEN_KEY = "Private-Token"
 API_TOKEN_SETTING_NAME = "private_token"
@@ -34,10 +32,12 @@ class GitLabStream(RESTStream):
 
     @property
     def schema_filename(self) -> str:
+        """Return the filename for the stream's schema."""
         return f"{self.name}.json"
 
     @property
     def schema_filepath(self) -> Path:
+        """Return the filepath for the stream's schema."""
         return SCHEMAS_DIR / self.schema_filename
 
     @property

@@ -2,7 +2,7 @@
 
 from typing import Any, Dict, Optional
 
-from tap_gitlab.client import GitLabStream, ProjectBasedStream, GroupBasedStream
+from tap_gitlab.client import GitLabStream, GroupBasedStream, ProjectBasedStream
 from tap_gitlab.transforms import object_array_to_id_array, pop_nested_id
 
 # Project-Specific Streams
@@ -19,6 +19,7 @@ class ProjectsStream(ProjectBasedStream):
     extra_url_params = {"statistics": 1}
 
     def post_process(self, row: dict, context: Optional[dict] = None) -> Optional[dict]:
+        """Post process records."""
         result = super().post_process(row, context)
         if result is None:
             return None
@@ -27,6 +28,7 @@ class ProjectsStream(ProjectBasedStream):
         return result
 
     def get_child_context(self, record: dict, context: Optional[dict]) -> dict:
+        """Perform post processing, including queuing up any child stream types."""
         assert context is not None
         return {
             "project_id": record["id"],
@@ -46,6 +48,7 @@ class IssuesStream(ProjectBasedStream):
     extra_url_params = {"scope": "all"}
 
     def post_process(self, row: dict, context: Optional[dict] = None) -> Optional[dict]:
+        """Post process records."""
         result = super().post_process(row, context)
         if result is None:
             return None
@@ -55,6 +58,8 @@ class IssuesStream(ProjectBasedStream):
 
 
 class ProjectMergeRequestsStream(ProjectBasedStream):
+    """Gitlab Merge Requests stream."""
+
     name = "merge_requests"
     path = "/projects/{project_path}/merge_requests"
     primary_keys = ["id"]
@@ -73,6 +78,7 @@ class ProjectMergeRequestsStream(ProjectBasedStream):
         }
 
     def post_process(self, row: dict, context: Optional[dict] = None) -> Optional[dict]:
+        """Post process records."""
         result = super().post_process(row, context)
         if result is None:
             return None
@@ -106,6 +112,8 @@ class CommitsStream(ProjectBasedStream):
 
 
 class BranchesStream(ProjectBasedStream):
+    """Gitlab Branches stream."""
+
     name = "branches"
     path = "/projects/{project_path}/repository/branches"
     primary_keys = ["project_id", "name"]
@@ -113,6 +121,7 @@ class BranchesStream(ProjectBasedStream):
     # parent_stream_type = ProjectsStream
 
     def post_process(self, row: dict, context: Optional[dict] = None) -> Optional[dict]:
+        """Post process records."""
         result = super().post_process(row, context)
         if result is None:
             return None
@@ -126,6 +135,8 @@ class BranchesStream(ProjectBasedStream):
 
 
 class PipelinesStream(ProjectBasedStream):
+    """Gitlab Pipelines stream."""
+
     name = "pipelines"
     path = "/projects/{project_path}/pipelines"
     primary_keys = ["id"]
@@ -133,12 +144,15 @@ class PipelinesStream(ProjectBasedStream):
     bookmark_param_name = "updated_after"
 
     def get_child_context(self, record: dict, context: Optional[dict]) -> dict:
+        """Perform post processing, including queuing up any child stream types."""
         context = super().get_child_context(record, context)
         context["pipeline_id"] = record["id"]
         return context
 
 
 class PipelinesExtendedStream(ProjectBasedStream):
+    """Gitlab extended Pipelines stream."""
+
     name = "pipelines_extended"
     path = "/projects/{project_path}/pipelines/{pipeline_id}"
     primary_keys = ["id"]
@@ -146,6 +160,8 @@ class PipelinesExtendedStream(ProjectBasedStream):
 
 
 class PipelineJobsStream(ProjectBasedStream):
+    """Gitlab Pipeline Jobs stream."""
+
     name = "jobs"
     path = "/projects/{project_path}/pipelines/{pipeline_id}/jobs"
     primary_keys = ["id"]
@@ -153,6 +169,8 @@ class PipelineJobsStream(ProjectBasedStream):
 
 
 class ProjectMilestonesStream(ProjectBasedStream):
+    """Gitlab Project Milestones stream."""
+
     name = "project_milestones"
     path = "/projects/{project_path}/milestones"
     primary_keys = ["id"]
@@ -169,30 +187,40 @@ class MergeRequestCommitsStream(ProjectBasedStream):
 
 
 class ProjectUsersStream(ProjectBasedStream):
+    """Gitlab Project Users stream."""
+
     name = "users"
     path = "/projects/{project_path}/users"
     primary_keys = ["id"]
 
 
 class ProjectMembersStream(ProjectBasedStream):
+    """Gitlab Project Members stream."""
+
     name = "project_members"
     path = "/projects/{project_path}/members"
     primary_keys = ["project_id", "id"]
 
 
 class ProjectLabelsStream(ProjectBasedStream):
+    """Gitlab Project Labels stream."""
+
     name = "project_labels"
     path = "/projects/{project_path}/labels"
     primary_keys = ["project_id", "id"]
 
 
 class ProjectVulnerabilitiesStream(ProjectBasedStream):
+    """Project Vulnerabilities stream."""
+
     name = "vulnerabilities"
     path = "/projects/{project_path}/vulnerabilities"
     primary_keys = ["id"]
 
 
 class ProjectVariablesStream(ProjectBasedStream):
+    """Project Variables stream."""
+
     name = "project_variables"
     path = "/projects/{project_path}/variables"
     primary_keys = ["group_id", "key"]
@@ -202,6 +230,8 @@ class ProjectVariablesStream(ProjectBasedStream):
 
 
 class GroupsStream(GroupBasedStream):
+    """Gitlab Groups stream."""
+
     name = "groups"
     path = "/groups/{group_path}"
     primary_keys = ["id"]
@@ -216,6 +246,8 @@ class GroupProjectsStream(GroupBasedStream):
 
 
 class GroupMilestonesStream(GroupBasedStream):
+    """Gitlab Group Milestones stream."""
+
     name = "group_milestones"
     path = "/groups/{group_path}/milestones"
     primary_keys = ["id"]
@@ -223,12 +255,16 @@ class GroupMilestonesStream(GroupBasedStream):
 
 
 class GroupMembersStream(GroupBasedStream):
+    """Gitlab Group Members stream."""
+
     name = "group_members"
     path = "/groups/{group_path}/members"
     primary_keys = ["group_id", "id"]
 
 
 class GroupLabelsStream(GroupBasedStream):
+    """Gitlab Group Labels stream."""
+
     name = "group_labels"
     path = "/groups/{group_path}/labels"
     primary_keys = ["group_id", "id"]
@@ -273,6 +309,8 @@ class GroupEpicIssuesStream(GroupBasedStream):
 
 
 class GroupVariablesStream(GroupBasedStream):
+    """Gitlab Group Variables stream."""
+
     name = "group_variables"
     path = "/groups/{group_path}/variables"
     primary_keys = ["project_id", "key"]
@@ -282,6 +320,8 @@ class GroupVariablesStream(GroupBasedStream):
 
 
 class GlobalSiteUsersStream(GitLabStream):
+    """Gitlab Global Site Users stream."""
+
     name = "site_users"
     path = "/users"
     primary_keys = ["id"]
@@ -301,7 +341,8 @@ class GlobalSiteUsersStream(GitLabStream):
 
 
 # TODO: Failing with:
-# FatalAPIError: 400 Client Error: Bad Request for path: /projects/{project_path}/repository/tags
+# FatalAPIError: 400 Client Error: Bad Request for path:
+# /projects/{project_path}/repository/tags
 # class TagsStream(ProjectBasedStream):
 #     name = "tags"
 #     path = "/projects/{project_path}/repository/tags"
