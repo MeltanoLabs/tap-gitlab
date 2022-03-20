@@ -4,8 +4,10 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any, Dict, List, Optional, cast
+from urllib.parse import parse_qs, urlparse
 
 import requests
+from dateutil.parser import parse
 from singer_sdk.authenticators import APIKeyAuthenticator
 from singer_sdk.streams import RESTStream
 
@@ -107,6 +109,43 @@ class ProjectBasedStream(GitLabStream):
             f"'{self.name}' ({self.path}). "
             "Expected a URL path containing '{project_path}' or '{group_path}'. "
         )
+
+
+class NoSinceProjectBasedStream(ProjectBasedStream):
+    """Base class for streams lacking a "since" query parameter.
+
+    It includes logic to emulate a "since" query parameter, for
+    instance for notes streams (eg. issue notes, MR notes...).
+    """
+
+    def get_next_page_token(
+        self, response: requests.Response, previous_token: Optional[Any]
+    ) -> Optional[Any]:
+        """Emulate a "since" parameter for streams that do not support it.
+
+        Return a token for identifying next page or None if no more pages."""
+
+        # extract the cutoff time from request parameters
+        request_parameters = parse_qs(str(urlparse(response.request.url).query))
+        # parse_qs interprets "+" as a space, revert this to keep an aware datetime
+        try:
+            cutoff = (
+                request_parameters[self.bookmark_param_name][0].replace(" ", "+")
+                if self.bookmark_param_name in request_parameters
+                else None
+            )
+        except IndexError:
+            cutoff = None
+
+        if cutoff is not None:
+            # get result items from response
+            resp_json = response.json()
+            results = resp_json
+            # if we receive items past the cutoff timestamp, we can stop paginating
+            if parse(results[-1][self.replication_key]) < parse(cutoff):
+                return None
+
+        return super().get_next_page_token(response, previous_token)
 
 
 class GroupBasedStream(GitLabStream):

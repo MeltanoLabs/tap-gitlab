@@ -5,7 +5,12 @@ from typing import Any, Dict, Iterable, Optional
 import requests
 from singer_sdk import typing as th  # JSON Schema typing helpers
 
-from tap_gitlab.client import GitLabStream, GroupBasedStream, ProjectBasedStream
+from tap_gitlab.client import (
+    GitLabStream,
+    GroupBasedStream,
+    NoSinceProjectBasedStream,
+    ProjectBasedStream,
+)
 from tap_gitlab.transforms import object_array_to_id_array, pop_nested_id
 
 # Project-Specific Streams
@@ -176,6 +181,12 @@ class IssuesStream(ProjectBasedStream):
         # result["assignees"] = object_array_to_id_array(result["assignees"])
         return result
 
+    def get_child_context(self, record: dict, context: Optional[dict]) -> dict:
+        """Return the context for child streams such as issue_notes."""
+        assert context is not None
+        context["issue_iid"] = record["iid"]
+        return context
+
     schema = th.PropertiesList(  # type: ignore
         th.Property("id", th.IntegerType),
         th.Property("iid", th.IntegerType),
@@ -209,6 +220,37 @@ class IssuesStream(ProjectBasedStream):
         th.Property("total_time_spent", th.IntegerType),
         th.Property("human_time_estimate", th.StringType),
         th.Property("human_total_time_spent", th.StringType),
+    ).to_dict()
+
+
+class IssueNotesStream(NoSinceProjectBasedStream):
+    """Gitlab Issues Notes (comments) Stream."""
+
+    # docs: https://docs.gitlab.com/ee/api/notes.html#list-project-issue-notes
+
+    name = "issue_notes"
+    parent_stream_type = IssuesStream
+    path = "/projects/{project_path}/issues/{issue_iid}/notes"
+    primary_keys = ["id"]
+    schema_filepath = None
+    # set this to project_path only to avoid saving a bookmark for each issue
+    # which would result in the state object becoming unusably large
+    state_partitioning_keys = ["project_path"]
+    extra_url_params = {"sort": "desc", "order_by": "updated_at"}
+    replication_key = "updated_at"
+    ignore_parent_replication_key = False
+
+    schema = th.PropertiesList(  # type: ignore
+        th.Property("id", th.IntegerType),
+        th.Property("noteable_id", th.IntegerType),
+        th.Property("noteable_iid", th.IntegerType),
+        th.Property("noteable_type", th.StringType),
+        th.Property("body", th.StringType),
+        th.Property("attachment", th.StringType),
+        th.Property("author", user_object),
+        th.Property("created_at", th.DateTimeType),
+        th.Property("updated_at", th.DateTimeType),
+        th.Property("confidential", th.BooleanType),
     ).to_dict()
 
 
@@ -253,6 +295,40 @@ class ProjectMergeRequestsStream(ProjectBasedStream):
             result[time_key] = time_stats.get(time_key, None)
 
         return result
+
+
+class MergeRequestNotesStream(NoSinceProjectBasedStream):
+    """Gitlab Merge Request Notes (comments) Stream."""
+
+    # docs: https://docs.gitlab.com/ee/api/notes.html#list-all-merge-request-notes
+
+    name = "merge_request_notes"
+    parent_stream_type = ProjectMergeRequestsStream
+    path = "/projects/{project_path}/merge_requests/{merge_request_id}/notes"
+    primary_keys = ["id"]
+    schema_filepath = None
+    # set this to project_path only to avoid saving a bookmark for each MR
+    # which would result in the state object becoming unusably large
+    state_partitioning_keys = ["project_path"]
+    extra_url_params = {"sort": "desc", "order_by": "updated_at"}
+    replication_key = "updated_at"
+    # there seems to be a "buffer" period in which the parent stream's
+    # updated_at field is not updated when a new comment is added very soon
+    # after a previous event.
+    ignore_parent_replication_key = False
+
+    schema = th.PropertiesList(  # type: ignore
+        th.Property("id", th.IntegerType),
+        th.Property("noteable_id", th.IntegerType),
+        th.Property("noteable_iid", th.IntegerType),
+        th.Property("noteable_type", th.StringType),
+        th.Property("body", th.StringType),
+        th.Property("attachment", th.StringType),
+        th.Property("author", user_object),
+        th.Property("created_at", th.DateTimeType),
+        th.Property("updated_at", th.DateTimeType),
+        th.Property("confidential", th.BooleanType),
+    ).to_dict()
 
 
 class CommitsStream(ProjectBasedStream):

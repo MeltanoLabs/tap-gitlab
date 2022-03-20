@@ -8,8 +8,12 @@ from singer_sdk import typing as th  # JSON schema typing helpers
 
 from tap_gitlab import streams
 from tap_gitlab.caching import setup_requests_cache
-from tap_gitlab.client import GroupBasedStream
-from tap_gitlab.streams import GitLabStream, ProjectBasedStream
+from tap_gitlab.client import (
+    GitLabStream,
+    GroupBasedStream,
+    NoSinceProjectBasedStream,
+    ProjectBasedStream,
+)
 
 OPTIN_STREAM_NAMES = [
     "merge_request_commits",
@@ -159,7 +163,12 @@ class TapGitLab(Tap):
             if not issubclass(module_class, (GitLabStream)):
                 continue  # Not a stream class.
 
-            if module_class in [GitLabStream, ProjectBasedStream, GroupBasedStream]:
+            if module_class in [
+                GitLabStream,
+                ProjectBasedStream,
+                GroupBasedStream,
+                NoSinceProjectBasedStream,
+            ]:
                 continue  # Base classes, not streams.
 
             stream_name = module_class.name
