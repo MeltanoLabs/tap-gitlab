@@ -52,8 +52,8 @@ class ProjectsStream(ProjectBasedStream):
     def get_url_params(
         self, context: Optional[dict], next_page_token: Optional[Any]
     ) -> Dict[str, Any]:
-        """
-        Return a dictionary of values to be used in URL parameterization.
+        """Return a dictionary of values to be used in URL parameterization.
+
         Projects endpoint can include license info if explicitly requested.
         """
         params = super().get_url_params(context, next_page_token)
@@ -137,7 +137,8 @@ class LanguagesStream(ProjectBasedStream):
     schema_filepath = None  # to allow the use of schema below
 
     def parse_response(self, response: requests.Response) -> Iterable[dict]:
-        """
+        """Return an iterator of {language_name, percent}.
+
         Parse the language response and reformat to return as an
         iterator of [{language_name: "Python", percent: 23.45}].
         """
