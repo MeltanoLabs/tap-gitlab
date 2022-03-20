@@ -123,8 +123,8 @@ class NoSinceProjectBasedStream(ProjectBasedStream):
     ) -> Optional[Any]:
         """Emulate a "since" parameter for streams that do not support it.
 
-        Return a token for identifying next page or None if no more pages."""
-
+        Return a token for identifying next page or None if no more pages.
+        """
         # extract the cutoff time from request parameters
         request_parameters = parse_qs(str(urlparse(response.request.url).query))
         # parse_qs interprets "+" as a space, revert this to keep an aware datetime
