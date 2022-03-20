@@ -6,6 +6,7 @@ from tap_gitlab.client import API_TOKEN_KEY
 
 
 def setup_requests_cache(tap_config: dict) -> None:
+    """Install the caching mechanism for requests."""
     cache_path_root = tap_config.get("requests_cache_path", None)
     if not cache_path_root:
         return None
