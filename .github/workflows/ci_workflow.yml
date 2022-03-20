@@ -3,7 +3,12 @@
 
 name: Test tap-gitlab
 
-on: [push]
+on:
+  # Run on all pull requests and on pushes to master.
+  pull_request:
+  push:
+    branches:
+      - main
 
 jobs:
   linting:
