@@ -36,7 +36,7 @@ class GitLabStream(RESTStream):
         return f"{self.name}.json"
 
     @property
-    def schema_filepath(self) -> Path:
+    def schema_filepath(self) -> Optional[Path]:
         """Return the filepath for the stream's schema."""
         return SCHEMAS_DIR / self.schema_filename
 
