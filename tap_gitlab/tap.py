@@ -168,6 +168,7 @@ class TapGitLab(Tap):
                 ProjectBasedStream,
                 GroupBasedStream,
                 NoSinceProjectBasedStream,
+                streams.NoteableStream,
             ]:
                 continue  # Base classes, not streams.
 
