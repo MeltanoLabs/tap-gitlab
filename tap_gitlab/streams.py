@@ -223,14 +223,11 @@ class IssuesStream(ProjectBasedStream):
     ).to_dict()
 
 
-class IssueNotesStream(NoSinceProjectBasedStream):
-    """Gitlab Issues Notes (comments) Stream."""
+class NoteableStream(NoSinceProjectBasedStream):
+    """Abstract class for gitlab's Noteable API stream."""
 
     # docs: https://docs.gitlab.com/ee/api/notes.html#list-project-issue-notes
 
-    name = "issue_notes"
-    parent_stream_type = IssuesStream
-    path = "/projects/{project_path}/issues/{issue_iid}/notes"
     primary_keys = ["id"]
     schema_filepath = None
     # set this to project_path only to avoid saving a bookmark for each issue
@@ -252,6 +249,14 @@ class IssueNotesStream(NoSinceProjectBasedStream):
         th.Property("updated_at", th.DateTimeType),
         th.Property("confidential", th.BooleanType),
     ).to_dict()
+
+
+class IssueNotesStream(NoteableStream):
+    """Gitlab Issues Notes (comments) Stream."""
+
+    name = "issue_notes"
+    parent_stream_type = IssuesStream
+    path = "/projects/{project_path}/issues/{issue_iid}/notes"
 
 
 class ProjectMergeRequestsStream(ProjectBasedStream):
@@ -297,7 +302,7 @@ class ProjectMergeRequestsStream(ProjectBasedStream):
         return result
 
 
-class MergeRequestNotesStream(NoSinceProjectBasedStream):
+class MergeRequestNotesStream(NoteableStream):
     """Gitlab Merge Request Notes (comments) Stream."""
 
     # docs: https://docs.gitlab.com/ee/api/notes.html#list-all-merge-request-notes
@@ -305,30 +310,6 @@ class MergeRequestNotesStream(NoSinceProjectBasedStream):
     name = "merge_request_notes"
     parent_stream_type = ProjectMergeRequestsStream
     path = "/projects/{project_path}/merge_requests/{merge_request_id}/notes"
-    primary_keys = ["id"]
-    schema_filepath = None
-    # set this to project_path only to avoid saving a bookmark for each MR
-    # which would result in the state object becoming unusably large
-    state_partitioning_keys = ["project_path"]
-    extra_url_params = {"sort": "desc", "order_by": "updated_at"}
-    replication_key = "updated_at"
-    # there seems to be a "buffer" period in which the parent stream's
-    # updated_at field is not updated when a new comment is added very soon
-    # after a previous event.
-    ignore_parent_replication_key = False
-
-    schema = th.PropertiesList(  # type: ignore
-        th.Property("id", th.IntegerType),
-        th.Property("noteable_id", th.IntegerType),
-        th.Property("noteable_iid", th.IntegerType),
-        th.Property("noteable_type", th.StringType),
-        th.Property("body", th.StringType),
-        th.Property("attachment", th.StringType),
-        th.Property("author", user_object),
-        th.Property("created_at", th.DateTimeType),
-        th.Property("updated_at", th.DateTimeType),
-        th.Property("confidential", th.BooleanType),
-    ).to_dict()
 
 
 class CommitsStream(ProjectBasedStream):
