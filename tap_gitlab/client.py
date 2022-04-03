@@ -141,6 +141,9 @@ class NoSinceProjectBasedStream(ProjectBasedStream):
             # get result items from response
             resp_json = response.json()
             results = resp_json
+            if len(results) == 0:
+                # gitlab API sometimes returns empty lists, no need to paginate further
+                return None
             # if we receive items past the cutoff timestamp, we can stop paginating
             if parse(results[-1][self.replication_key]) < parse(cutoff):
                 return None
