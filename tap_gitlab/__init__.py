@@ -119,6 +119,12 @@ RESOURCES = {
         'key_properties': ['id'],
         'replication_method': 'FULL_TABLE',
     },
+    'subgroups': {
+        'url': '/groups/{id}/subgroups', 
+        'schema': load_schema('subgroups'),
+        'key_properties': ['id'], 
+        'replication_method': 'FULL_TABLE'
+    },
     'project_members': {
         'url': '/projects/{id}/members',
         'schema': load_schema('project_members'),
@@ -652,6 +658,17 @@ def sync_epics(group):
 
     singer.write_state(STATE)
 
+def find_subgroups(gid):
+    req_gen = gen_request(get_url(entity="subgroups", id=gid))
+
+    gids = []
+
+    for request in req_gen:
+        if request["id"] and request["path"]:
+            gids.append(f"{gid}/{request['path']}")
+
+    return gids
+
 def sync_group(gid, pids):
     stream = CATALOG.get_stream("groups")
     mdata = metadata.to_map(stream.metadata)
@@ -899,6 +916,9 @@ def do_sync():
         singer.write_schema(stream.tap_stream_id, stream.schema.to_dict(), stream.key_properties)
 
     sync_site_users()
+
+    if len(gids) == 1:
+        gids = find_subgroups(gids[0])
 
     for gid in gids:
         sync_group(gid, pids)
