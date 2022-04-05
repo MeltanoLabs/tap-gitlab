@@ -4,14 +4,41 @@
         "id": {
             "type": ["null", "string"]
         },
-        "project_id": {
-            "type": ["null", "integer"]
-        },
         "short_id": {
             "type": ["null", "string"]
         },
+        "created_at": {
+            "anyOf": [
+                {
+                    "type": "string",
+                    "format": "date-time"
+                },
+                {
+                    "type": "null"
+                }
+            ]
+        },
+        "parent_ids": {
+            "anyOf": [
+                {
+                    "type": "array",
+                    "items": {
+                        "type": ["null", "string"]
+                    }
+                },
+                {
+                    "type": "null"
+                }
+            ]
+        },
         "title": {
             "type": ["null", "string"]
+        },
+        "message": {
+            "type": ["null", "string"]
+        },
+        "project_id": {
+            "type": ["null", "integer"]
         },
         "author_name": {
             "type": ["null", "string"]
@@ -41,36 +68,6 @@
                 {
                     "type": "string",
                     "format": "date-time"
-                },
-                {
-                    "type": "null"
-                }
-            ]
-        },
-        "created_at": {
-            "anyOf": [
-                {
-                    "type": "string",
-                    "format": "date-time"
-                },
-                {
-                    "type": "null"
-                }
-            ]
-        },
-        "message": {
-            "type": ["null", "string"]
-        },
-        "allow_failure": {
-            "type": ["null", "boolean"]
-        },
-        "parent_ids": {
-            "anyOf": [
-                {
-                    "type": "array",
-                    "items": {
-                        "type": ["null", "string"]
-                    }
                 },
                 {
                     "type": "null"

@@ -27,6 +27,9 @@
         },
         "commit_id": {
             "type": ["null", "string"]
+        },
+        "web_url": {
+            "type": ["null", "string"]
         }
     }
 }

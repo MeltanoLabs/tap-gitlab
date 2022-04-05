@@ -65,6 +65,12 @@
         "merge_requests_enabled": {
             "type": ["null", "boolean"]
         },
+        "merge_pipelines_enabled": {
+            "type": ["null", "boolean"]
+        },
+        "container_registry_image_prefix": {
+            "type": ["null", "string"]
+        },
         "merge_method": {
             "type": ["null", "string"]
         },
@@ -101,6 +107,15 @@
             "type": ["null", "boolean"]
         },
         "only_allow_merge_if_build_succeeds": {
+            "type": ["null", "boolean"]
+        },
+        "only_allow_merge_if_pipeline_succeeds": {
+            "type": ["null", "boolean"]
+        },
+        "remove_source_branch_after_merge": {
+            "type": ["null", "boolean"]
+        },
+        "merge_trains_enabled": {
             "type": ["null", "boolean"]
         },
         "open_issues_count": {
@@ -238,6 +253,9 @@
             "type": ["null", "integer"]
         },
         "visibility": {
+            "type": ["null", "string"]
+        },
+        "readme_url": {
             "type": ["null", "string"]
         },
         "web_url": {

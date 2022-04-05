@@ -13,7 +13,31 @@
         "description": {
             "type": ["null", "string"]
         },
-        "visibility_level": {
+        "visibility": {
+            "type": ["null", "integer"]
+        },
+        "share_with_group_lock": {
+            "type": ["null", "boolean"]
+        },
+        "require_two_factor_authentication": {
+            "type": ["null", "boolean"]
+        },
+        "two_factor_grace_period": {
+            "type": ["null", "integer"]
+        },
+        "project_creation_level": {
+            "type": ["null", "string"]
+        },
+        "subgroup_creation_level": {
+            "type": ["null", "string"]
+        },
+        "auto_devops_enabled": {
+            "type": ["null", "boolean"]
+        },
+        "emails_disabled": {
+            "type": ["null", "boolean"]
+        },
+        "default_branch_protection": {
             "type": ["null", "integer"]
         },
         "lfs_enabled": {
@@ -51,6 +75,9 @@
                     "type": "null"
                 }
             ]
+        },
+        "parent_id": {
+            "type": ["null", "integer"]
         }
     }
 }

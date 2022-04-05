@@ -10,6 +10,37 @@
         "project_id": {
             "type": ["null", "integer"]
         },
+        "title": {
+            "type": ["null", "string"]
+        },
+        "description": {
+            "type": ["null", "string"]
+        },
+        "state": {
+            "type": ["null", "string"]
+        },
+        "created_at": {
+            "anyOf": [
+                {
+                    "type": "string",
+                    "format": "date-time"
+                },
+                {
+                    "type": "null"
+                }
+            ]
+        },
+        "updated_at": {
+            "anyOf": [
+                {
+                    "type": "string",
+                    "format": "date-time"
+                },
+                {
+                    "type": "null"
+                }
+            ]
+        },
         "milestone_id": {
             "type": ["null", "integer"]
         },
@@ -37,28 +68,6 @@
         "closed_by_id": {
             "type": ["null", "integer"]
         },
-        "created_at": {
-            "anyOf": [
-                {
-                    "type": "string",
-                    "format": "date-time"
-                },
-                {
-                    "type": "null"
-                }
-            ]
-        },
-        "updated_at": {
-            "anyOf": [
-                {
-                    "type": "string",
-                    "format": "date-time"
-                },
-                {
-                    "type": "null"
-                }
-            ]
-        },
         "merged_at": {
             "anyOf": [
                 {
@@ -80,15 +89,6 @@
                     "type": "null"
                 }
             ]
-        },
-        "title": {
-            "type": ["null", "string"]
-        },
-        "description": {
-            "type": ["null", "string"]
-        },
-        "state": {
-            "type": ["null", "string"]
         },
         "target_project_id": {
             "type": ["null", "integer"]
@@ -114,6 +114,9 @@
                 "type": ["null", "string"]
             }
         },
+        "draft": {
+            "type": ["null", "boolean"]
+        },
         "work_in_progress": {
             "type": ["null", "boolean"]
         },
@@ -127,6 +130,9 @@
             "type": ["null", "boolean"]
         },
         "sha": {
+            "type": ["null", "string"]
+        },
+        "merge_commit_sha": {
             "type": ["null", "string"]
         },
         "squash_commit_sha": {
