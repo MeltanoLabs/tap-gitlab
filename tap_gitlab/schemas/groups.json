@@ -14,7 +14,7 @@
             "type": ["null", "string"]
         },
         "visibility": {
-            "type": ["null", "integer"]
+            "type": ["null", "string"]
         },
         "share_with_group_lock": {
             "type": ["null", "boolean"]
