@@ -419,8 +419,25 @@ class ProjectLabelsStream(ProjectBasedStream):
 
     name = "project_labels"
     path = "/projects/{project_path}/labels"
-    primary_keys = ["project_id", "id"]
+    primary_keys = ["id"]
+    schema_filepath = None
+    state_partitioning_keys = ["project_path"]
+    extra_url_params = {"per_page": 100}
 
+    schema = th.PropertiesList(  # type: ignore
+        th.Property("id", th.IntegerType),
+        th.Property("project_path", th.StringType),
+        th.Property("name", th.StringType),
+        th.Property("color", th.StringType),
+        th.Property("text_color", th.StringType),
+        th.Property("description", th.StringType),
+        th.Property("open_issues_count", th.IntegerType),
+        th.Property("closed_issues_count", th.IntegerType),
+        th.Property("open_merge_requests_count", th.IntegerType),
+        th.Property("subscribed", th.BooleanType),
+        th.Property("priority", th.IntegerType),
+        th.Property("is_project_label", th.BooleanType),
+    ).to_dict()
 
 class ProjectVulnerabilitiesStream(ProjectBasedStream):
     """Project Vulnerabilities stream."""
