@@ -63,6 +63,9 @@
         "committer_email": {
             "type": ["null", "string"]
         },
+        "allow_failure": {
+            "type": ["null", "boolean"]
+        },
         "committed_date": {
             "anyOf": [
                 {
