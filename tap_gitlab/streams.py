@@ -268,6 +268,7 @@ class ProjectMergeRequestsStream(ProjectBasedStream):
     replication_key = "updated_at"
     bookmark_param_name = "updated_after"
     extra_url_params = {"scope": "all"}
+    schema_filepath = None  # to allow the use of schema below
 
     def get_child_context(self, record: dict, context: Optional[dict]) -> dict:
         """Perform post processing, including queuing up any child stream types."""
@@ -285,11 +286,6 @@ class ProjectMergeRequestsStream(ProjectBasedStream):
         if result is None:
             return None
 
-        for key in ["author", "assignee", "milestone", "merge_by", "closed_by"]:
-            result[f"{key}_id"] = pop_nested_id(result, key)
-        result["assignees"] = object_array_to_id_array(result["assignees"])
-        result["reviewers"] = object_array_to_id_array(result["reviewers"])
-
         time_stats = result.pop("time_stats", {})
         for time_key in [
             "time_estimate",
@@ -300,6 +296,59 @@ class ProjectMergeRequestsStream(ProjectBasedStream):
             result[time_key] = time_stats.get(time_key, None)
 
         return result
+
+    schema = th.PropertiesList(  # type: ignore
+        th.Property("id", th.IntegerType),
+        th.Property("iid", th.IntegerType),
+        th.Property("project_id", th.IntegerType),
+        th.Property("milestone_id", th.IntegerType),
+        th.Property("epic_id", th.IntegerType),
+        th.Property("author", user_object),
+        th.Property("assignees", th.ArrayType(user_object)),
+        th.Property("reviewers", th.ArrayType(user_object)),
+        # merged_by is deprecated
+        th.Property("merge_user", user_object),
+        th.Property("closed_by", user_object),
+        th.Property("title", th.StringType),
+        th.Property("description", th.StringType),
+        th.Property("state", th.StringType),
+        th.Property("labels", th.ArrayType(th.StringType)),
+        th.Property("created_at", th.DateTimeType),
+        th.Property("updated_at", th.DateTimeType),
+        th.Property("merged_at", th.DateTimeType),
+        th.Property("closed_at", th.DateTimeType),
+        th.Property("target_project_id", th.IntegerType),
+        th.Property("target_branch", th.StringType),
+        th.Property("source_project_id", th.IntegerType),
+        th.Property("source_branch", th.StringType),
+        th.Property("subscribed", th.BooleanType),
+        th.Property("draft", th.BooleanType),
+        th.Property("work_in_progress", th.BooleanType),
+        th.Property("merge_when_pipeline_succeeds", th.BooleanType),
+        th.Property("merge_status", th.StringType),
+        th.Property("has_conflicts", th.BooleanType),
+        th.Property("upvotes", th.IntegerType),
+        th.Property("downvotes", th.IntegerType),
+        th.Property("sha", th.StringType),
+        th.Property("squash", th.BooleanType),
+        th.Property("squash_commit_sha", th.StringType),
+        th.Property("user_notes_count", th.IntegerType),
+        th.Property("should_remove_source_branch", th.BooleanType),
+        th.Property("force_remove_source_branch", th.BooleanType),
+        th.Property("allow_collaboration", th.BooleanType),
+        th.Property("allow_maintainer_to_push", th.BooleanType),
+        th.Property("due_date", th.StringType),
+        th.Property("weight", th.IntegerType),
+        th.Property("web_url", th.StringType),
+        th.Property("confidential", th.BooleanType),
+        th.Property("discussion_locked", th.BooleanType),
+        th.Property("has_tasks", th.BooleanType),
+        th.Property("task_status", th.StringType),
+        th.Property("time_estimate", th.IntegerType),
+        th.Property("total_time_spent", th.IntegerType),
+        th.Property("human_time_estimate", th.StringType),
+        th.Property("human_total_time_spent", th.StringType),
+    ).to_dict()
 
 
 class MergeRequestNotesStream(NoteableStream):
