@@ -370,7 +370,31 @@ class CommitsStream(ProjectBasedStream):
     replication_key = "created_at"
     is_sorted = False
     extra_url_params = {"with_stats": "true"}
+    schema_filepath = None  # to allow the use of schema below
 
+    schema = th.PropertiesList(  # type: ignore
+        th.Property("project_path", th.StringType),
+        th.Property("id", th.StringType),
+        th.Property("short_id", th.StringType),
+        th.Property("created_at", th.DateTimeType),
+        th.Property("parent_ids", th.ArrayType(th.StringType())),
+        th.Property("title", th.StringType),
+        th.Property("message", th.StringType),
+        th.Property("author_name", th.StringType),
+        th.Property("author_email", th.StringType),
+        th.Property("authored_date", th.DateTimeType),
+        th.Property("committer_name", th.StringType),
+        th.Property("committer_email", th.StringType),
+        th.Property("committed_date", th.DateTimeType),
+        th.Property("web_url", th.StringType),
+        th.Property("stats",
+            th.ObjectType(
+                th.Property('additions', th.IntegerType),
+                th.Property('deletions', th.IntegerType),
+                th.Property('total', th.IntegerType),
+            ),
+        ),
+    ).to_dict()
 
 class BranchesStream(ProjectBasedStream):
     """Gitlab Branches stream."""
