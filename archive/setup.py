@@ -2,26 +2,27 @@
 
 from setuptools import setup
 
-setup(name='tap-gitlab',
-      version='0.9.15',
-      description='Singer.io tap for extracting data from the GitLab API',
-      author='Meltano Team && Stitch',
-      url='https://singer.io',
-      classifiers=['Programming Language :: Python :: 3 :: Only'],
-      py_modules=['tap_gitlab'],
-      install_requires=[
-          'singer-python==5.9.1',
-          'requests==2.20.0',
-          'strict-rfc3339==0.7',
-          'backoff==1.8.0'
-      ],
-      entry_points='''
+setup(
+    name="tap-gitlab",
+    version="0.9.15",
+    description="Singer.io tap for extracting data from the GitLab API",
+    author="Meltano Team && Stitch",
+    url="https://singer.io",
+    classifiers=["Programming Language :: Python :: 3 :: Only"],
+    py_modules=["tap_gitlab"],
+    install_requires=[
+        "singer-python==5.9.1",
+        "requests==2.20.0",
+        "strict-rfc3339==0.7",
+        "backoff==1.8.0",
+    ],
+    entry_points="""
           [console_scripts]
           tap-gitlab=tap_gitlab:main
-      ''',
-      packages=['tap_gitlab'],
-      package_data = {
-          'tap_gitlab/schemas': [
+      """,
+    packages=["tap_gitlab"],
+    package_data={
+        "tap_gitlab/schemas": [
             "branches.json",
             "commits.json",
             "issues.json",
@@ -38,8 +39,8 @@ setup(name='tap-gitlab',
             "releases.json",
             "vulnerabilities.json",
             "project_variables.json",
-            "group_variables.json"
-          ],
-      },
-      include_package_data=True,
+            "group_variables.json",
+        ],
+    },
+    include_package_data=True,
 )
