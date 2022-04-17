@@ -387,14 +387,16 @@ class CommitsStream(ProjectBasedStream):
         th.Property("committer_email", th.StringType),
         th.Property("committed_date", th.DateTimeType),
         th.Property("web_url", th.StringType),
-        th.Property("stats",
+        th.Property(
+            "stats",
             th.ObjectType(
-                th.Property('additions', th.IntegerType),
-                th.Property('deletions', th.IntegerType),
-                th.Property('total', th.IntegerType),
+                th.Property("additions", th.IntegerType),
+                th.Property("deletions", th.IntegerType),
+                th.Property("total", th.IntegerType),
             ),
         ),
     ).to_dict()
+
 
 class BranchesStream(ProjectBasedStream):
     """Gitlab Branches stream."""
@@ -511,6 +513,7 @@ class ProjectLabelsStream(ProjectBasedStream):
         th.Property("priority", th.IntegerType),
         th.Property("is_project_label", th.BooleanType),
     ).to_dict()
+
 
 class ProjectVulnerabilitiesStream(ProjectBasedStream):
     """Project Vulnerabilities stream."""
