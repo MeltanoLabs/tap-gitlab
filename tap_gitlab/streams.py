@@ -11,7 +11,7 @@ from tap_gitlab.client import (
     NoSinceProjectBasedStream,
     ProjectBasedStream,
 )
-from tap_gitlab.transforms import object_array_to_id_array, pop_nested_id
+from tap_gitlab.transforms import pop_nested_id
 
 # Project-Specific Streams
 
