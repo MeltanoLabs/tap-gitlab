@@ -5,10 +5,9 @@ import os
 from typing import Any, Dict
 
 from dotenv import load_dotenv
-
 from singer_sdk.testing import get_standard_tap_tests
 
-from tap_gitlab.tap import TapGitLab, OPTIN_STREAM_NAMES
+from tap_gitlab.tap import OPTIN_STREAM_NAMES, TapGitLab
 
 load_dotenv()  # Import any environment variables from local `.env` file.
 
