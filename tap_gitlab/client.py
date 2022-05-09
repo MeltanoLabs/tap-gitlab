@@ -86,27 +86,11 @@ class GitLabStream(RESTStream):
 
     @staticmethod
     def _url_encode(val: Union[str, datetime, bool, int, List[str]]) -> str:
-        """Encode the val argument as url-compatible string.
-
-        Args:
-            val: TODO
-
-        Returns:
-            TODO
-        """
+        """Encode the val argument as url-compatible string."""
         return urllib.parse.quote_plus(str(val))
 
     def get_url(self, context: Optional[dict]) -> str:
-        """Get stream entity URL.
-
-        Developers override this method to perform dynamic URL generation.
-
-        Args:
-            context: Stream partition or context dictionary.
-
-        Returns:
-            A URL, optionally targeted to a specific partition or context.
-        """
+        """Get stream entity URL."""
         url = "".join([self.url_base, self.path or ""])
         vals = copy.copy(dict(self.config))
         vals.update(context or {})
