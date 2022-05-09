@@ -26,8 +26,10 @@ SAMPLE_CONFIG: Dict[str, Any] = {
 for k, v in os.environ.items():
     if k.startswith(PREFIX):
         if v.lower() == "false":
+            os.environ.pop(k)
             SAMPLE_CONFIG[k.lstrip(PREFIX).lower()] = False
         elif v.lower() == "true":
+            os.environ.pop(k)
             SAMPLE_CONFIG[k.lstrip(PREFIX).lower()] = True
 
 
@@ -44,4 +46,4 @@ def test_tap_config_defaults():
     """Run standard tap tests from the SDK."""
     tap = TapGitLab(config=SAMPLE_CONFIG, parse_env_config=True)
     for optin_stream in OPTIN_STREAM_NAMES:
-        assert f"pull_{optin_stream}" in tap.config
+        assert f"fetch_{optin_stream}" in tap.config
