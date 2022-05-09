@@ -141,7 +141,6 @@ class BranchesStream(ProjectBasedStream):
     name = "branches"
     path = "/projects/{project_id}/repository/branches"
     primary_keys = ["project_id", "name"]
-    # TODO: Research why this fails:
     parent_stream_type = ProjectsStream
 
     def post_process(self, row: dict, context: Optional[dict] = None) -> Optional[dict]:
@@ -152,8 +151,7 @@ class BranchesStream(ProjectBasedStream):
 
         assert context is not None
 
-        # TODO: Uncomment when parent relationship works
-        # result["project_id"] = context["project_id"]
+        result["project_id"] = context["project_id"]
         result["commit_id"] = pop_nested_id(result, "commit")
         return result
 
