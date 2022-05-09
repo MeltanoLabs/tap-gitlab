@@ -177,7 +177,6 @@ class PipelinesExtendedStream(ProjectBasedStream):
     """Gitlab extended Pipelines stream."""
 
     name = "pipelines_extended"
-    parent_stream_type = ProjectsStream
     path = "/projects/{project_id}/pipelines/{pipeline_id}"
     primary_keys = ["id"]
     parent_stream_type = PipelinesStream
@@ -187,7 +186,6 @@ class PipelineJobsStream(ProjectBasedStream):
     """Gitlab Pipeline Jobs stream."""
 
     name = "jobs"
-    parent_stream_type = ProjectsStream
     path = "/projects/{project_id}/pipelines/{pipeline_id}/jobs"
     primary_keys = ["id"]
     parent_stream_type = PipelinesStream  # Stream should wait for parents to complete.
