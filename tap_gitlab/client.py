@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import copy
+import urllib
+from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, cast
+from typing import Any, Dict, List, Optional, Union, cast
 
 import requests
 from singer_sdk.authenticators import APIKeyAuthenticator
@@ -80,6 +83,44 @@ class GitLabStream(RESTStream):
     ) -> Optional[Any]:
         """Return token for identifying next page or None if not applicable."""
         return response.headers.get("X-Next-Page", None)
+
+    @staticmethod
+    def _url_encode(val: Union[str, datetime, bool, int, List[str]]) -> str:
+        """Encode the val argument as url-compatible string.
+
+        Args:
+            val: TODO
+
+        Returns:
+            TODO
+        """
+        return urllib.parse.quote_plus(str(val))
+
+    def get_url(self, context: Optional[dict]) -> str:
+        """Get stream entity URL.
+
+        Developers override this method to perform dynamic URL generation.
+
+        Args:
+            context: Stream partition or context dictionary.
+
+        Returns:
+            A URL, optionally targeted to a specific partition or context.
+        """
+        url = "".join([self.url_base, self.path or ""])
+        vals = copy.copy(dict(self.config))
+        vals.update(context or {})
+        for key, val in vals.items():
+            search_text = "".join(["{", key, "}"])
+            if search_text in url:
+                url = url.replace(search_text, self._url_encode(val))
+                if "{project_path}" in search_text:
+                    self.logger.info(
+                        f"DEBUG: Found project arg. URL is {url} after parsing "
+                        f"input val '{val}' to '{self._url_encode(val)}'."
+                    )
+
+        return url
 
 
 class ProjectBasedStream(GitLabStream):
