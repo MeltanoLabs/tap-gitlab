@@ -31,7 +31,11 @@ class TapGitLab(Tap):
             "api_url",
             th.StringType,
             required=False,
-            description="Optionally overrides the default base URL for the Gitlab API.",
+            description=(
+                "Optionally overrides the default base URL for the Gitlab API. "
+                "If no path is provided, the base URL will be appended with `/api/v4`. "
+                "E.g. 'https://gitlab.com' becomes 'https://gitlab.com/api/v4'."
+            ),
         ),
         th.Property(
             "private_token",

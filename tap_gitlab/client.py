@@ -30,8 +30,16 @@ class GitLabStream(RESTStream):
 
     @property
     def url_base(self) -> str:
-        """Return the API URL root, configurable via tap settings."""
-        return self.config.get("api_url", DEFAULT_API_URL)
+        """Return the API URL root, configurable via tap settings.
+
+        If no path is provided, the base URL will be appended with `/api/v4`.
+        E.g. 'https://gitlab.com' would become 'https://gitlab.com/api/v4'
+        """
+        result = self.config.get("api_url", DEFAULT_API_URL)
+        if "/" not in result.replace("://", ""):
+            # If not path part is provided, append the v4 endpoint info.
+            result += "/api/v4"
+        return result
 
     @property
     def schema_filename(self) -> str:
