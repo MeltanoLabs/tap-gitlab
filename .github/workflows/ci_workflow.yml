@@ -36,7 +36,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       TAP_GITLAB_PRIVATE_TOKEN: ${{secrets.GITLAB_PRIVATE_TOKEN}}
-      TAP_GITLAB_GROUPS: meltano
+      TAP_GITLAB_GROUPS: meltano/infra
       TAP_GITLAB_PROJECTS: meltano/demo-project
       TAP_GITLAB_ULTIMATE_LICENSE: false
       TAP_GITLAB_FETCH_MERGE_REQUEST_COMMITS: false
