@@ -87,27 +87,6 @@ class ProjectBasedStream(GitLabStream):
 
     state_partitioning_keys = ["project_path"]
 
-    @property
-    def partitions(self) -> List[dict]:
-        """Return a list of partition key dicts (if applicable), otherwise None."""
-        if "{project_path}" in self.path:
-            if "projects" not in self.config:
-                raise ValueError(
-                    f"Missing `projects` setting which is required for the "
-                    f"'{self.name}' stream."
-                )
-
-            return [
-                {"project_path": id}
-                for id in cast(list, self.config["projects"].split(" "))
-            ]
-
-        raise ValueError(
-            "Could not detect partition type for Gitlab stream "
-            f"'{self.name}' ({self.path}). "
-            "Expected a URL path containing '{project_path}' or '{group_path}'. "
-        )
-
 
 class GroupBasedStream(GitLabStream):
     """Base class for streams that are keys based on group ID."""

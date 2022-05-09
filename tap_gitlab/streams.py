@@ -1,6 +1,6 @@
 """Stream type classes for tap-gitlab."""
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional, cast
 
 from tap_gitlab.client import GitLabStream, GroupBasedStream, ProjectBasedStream
 from tap_gitlab.transforms import object_array_to_id_array, pop_nested_id
@@ -17,6 +17,27 @@ class ProjectsStream(ProjectBasedStream):
     replication_key = "last_activity_at"
     is_sorted = True
     extra_url_params = {"statistics": 1}
+
+    @property
+    def partitions(self) -> List[dict]:
+        """Return a list of partition key dicts (if applicable), otherwise None."""
+        if "{project_path}" in self.path:
+            if "projects" not in self.config:
+                raise ValueError(
+                    f"Missing `projects` setting which is required for the "
+                    f"'{self.name}' stream."
+                )
+
+            return [
+                {"project_path": id}
+                for id in cast(list, self.config["projects"].split(" "))
+            ]
+
+        raise ValueError(
+            "Could not detect partition type for Gitlab stream "
+            f"'{self.name}' ({self.path}). "
+            "Expected a URL path containing '{project_path}' or '{group_path}'. "
+        )
 
     def post_process(self, row: dict, context: Optional[dict] = None) -> Optional[dict]:
         """Post process records."""
@@ -40,7 +61,8 @@ class IssuesStream(ProjectBasedStream):
     """Gitlab Issues stream."""
 
     name = "issues"
-    path = "/projects/{project_path}/issues"
+    parent_stream_type = ProjectsStream
+    path = "/projects/{project_id}/issues"
     primary_keys = ["id"]
     replication_key = "updated_at"
     bookmark_param_name = "updated_after"
@@ -61,7 +83,8 @@ class ProjectMergeRequestsStream(ProjectBasedStream):
     """Gitlab Merge Requests stream."""
 
     name = "merge_requests"
-    path = "/projects/{project_path}/merge_requests"
+    parent_stream_type = ProjectsStream
+    path = "/projects/{project_id}/merge_requests"
     primary_keys = ["id"]
     replication_key = "updated_at"
     bookmark_param_name = "updated_after"
@@ -104,7 +127,8 @@ class CommitsStream(ProjectBasedStream):
     """Gitlab Commits stream."""
 
     name = "commits"
-    path = "/projects/{project_path}/repository/commits"
+    parent_stream_type = ProjectsStream
+    path = "/projects/{project_id}/repository/commits"
     primary_keys = ["id"]
     replication_key = "created_at"
     is_sorted = False
@@ -115,10 +139,10 @@ class BranchesStream(ProjectBasedStream):
     """Gitlab Branches stream."""
 
     name = "branches"
-    path = "/projects/{project_path}/repository/branches"
+    path = "/projects/{project_id}/repository/branches"
     primary_keys = ["project_id", "name"]
     # TODO: Research why this fails:
-    # parent_stream_type = ProjectsStream
+    parent_stream_type = ProjectsStream
 
     def post_process(self, row: dict, context: Optional[dict] = None) -> Optional[dict]:
         """Post process records."""
@@ -138,10 +162,11 @@ class PipelinesStream(ProjectBasedStream):
     """Gitlab Pipelines stream."""
 
     name = "pipelines"
-    path = "/projects/{project_path}/pipelines"
+    path = "/projects/{project_id}/pipelines"
     primary_keys = ["id"]
     replication_key = "updated_at"
     bookmark_param_name = "updated_after"
+    parent_stream_type = ProjectsStream
 
     def get_child_context(self, record: dict, context: Optional[dict]) -> dict:
         """Perform post processing, including queuing up any child stream types."""
@@ -154,7 +179,8 @@ class PipelinesExtendedStream(ProjectBasedStream):
     """Gitlab extended Pipelines stream."""
 
     name = "pipelines_extended"
-    path = "/projects/{project_path}/pipelines/{pipeline_id}"
+    parent_stream_type = ProjectsStream
+    path = "/projects/{project_id}/pipelines/{pipeline_id}"
     primary_keys = ["id"]
     parent_stream_type = PipelinesStream
 
@@ -163,7 +189,8 @@ class PipelineJobsStream(ProjectBasedStream):
     """Gitlab Pipeline Jobs stream."""
 
     name = "jobs"
-    path = "/projects/{project_path}/pipelines/{pipeline_id}/jobs"
+    parent_stream_type = ProjectsStream
+    path = "/projects/{project_id}/pipelines/{pipeline_id}/jobs"
     primary_keys = ["id"]
     parent_stream_type = PipelinesStream  # Stream should wait for parents to complete.
 
@@ -172,16 +199,17 @@ class ProjectMilestonesStream(ProjectBasedStream):
     """Gitlab Project Milestones stream."""
 
     name = "project_milestones"
-    path = "/projects/{project_path}/milestones"
+    path = "/projects/{project_id}/milestones"
     primary_keys = ["id"]
     schema_filename = "milestones.json"
+    parent_stream_type = ProjectsStream
 
 
 class MergeRequestCommitsStream(ProjectBasedStream):
     """Gitlab Commits stream."""
 
     name = "merge_request_commits"
-    path = "/projects/{project_path}/merge_requests/{merge_request_id}/commits"
+    path = "/projects/{project_id}/merge_requests/{merge_request_id}/commits"
     primary_keys = ["project_id", "merge_request_iid", "commit_id"]
     parent_stream_type = ProjectMergeRequestsStream
 
@@ -190,40 +218,45 @@ class ProjectUsersStream(ProjectBasedStream):
     """Gitlab Project Users stream."""
 
     name = "users"
-    path = "/projects/{project_path}/users"
+    path = "/projects/{project_id}/users"
     primary_keys = ["id"]
+    parent_stream_type = ProjectsStream
 
 
 class ProjectMembersStream(ProjectBasedStream):
     """Gitlab Project Members stream."""
 
     name = "project_members"
-    path = "/projects/{project_path}/members"
+    path = "/projects/{project_id}/members"
     primary_keys = ["project_id", "id"]
+    parent_stream_type = ProjectsStream
 
 
 class ProjectLabelsStream(ProjectBasedStream):
     """Gitlab Project Labels stream."""
 
     name = "project_labels"
-    path = "/projects/{project_path}/labels"
+    path = "/projects/{project_id}/labels"
     primary_keys = ["project_id", "id"]
+    parent_stream_type = ProjectsStream
 
 
 class ProjectVulnerabilitiesStream(ProjectBasedStream):
     """Project Vulnerabilities stream."""
 
     name = "vulnerabilities"
-    path = "/projects/{project_path}/vulnerabilities"
+    path = "/projects/{project_id}/vulnerabilities"
     primary_keys = ["id"]
+    parent_stream_type = ProjectsStream
 
 
 class ProjectVariablesStream(ProjectBasedStream):
     """Project Variables stream."""
 
     name = "project_variables"
-    path = "/projects/{project_path}/variables"
+    path = "/projects/{project_id}/variables"
     primary_keys = ["group_id", "key"]
+    parent_stream_type = ProjectsStream
 
 
 # Group-Specific Streams
@@ -243,6 +276,7 @@ class GroupProjectsStream(GroupBasedStream):
     name = "group_projects"
     path = "/groups/{group_path}/projects"
     primary_keys = ["id"]
+    parent_stream_type = GroupsStream
 
 
 class GroupMilestonesStream(GroupBasedStream):
@@ -252,6 +286,7 @@ class GroupMilestonesStream(GroupBasedStream):
     path = "/groups/{group_path}/milestones"
     primary_keys = ["id"]
     schema_filename = "milestones.json"
+    parent_stream_type = GroupsStream
 
 
 class GroupMembersStream(GroupBasedStream):
@@ -260,6 +295,7 @@ class GroupMembersStream(GroupBasedStream):
     name = "group_members"
     path = "/groups/{group_path}/members"
     primary_keys = ["group_id", "id"]
+    parent_stream_type = GroupsStream
 
 
 class GroupLabelsStream(GroupBasedStream):
@@ -268,6 +304,7 @@ class GroupLabelsStream(GroupBasedStream):
     name = "group_labels"
     path = "/groups/{group_path}/labels"
     primary_keys = ["group_id", "id"]
+    parent_stream_type = GroupsStream
 
 
 class GroupEpicsStream(GroupBasedStream):
@@ -278,6 +315,7 @@ class GroupEpicsStream(GroupBasedStream):
     primary_keys = ["id"]
     replication_key = "updated_at"
     bookmark_param_name = "updated_after"
+    parent_stream_type = GroupsStream
 
     def get_child_context(self, record: dict, context: Optional[dict]) -> dict:
         """Perform post processing, including queuing up any child stream types."""
@@ -294,7 +332,7 @@ class GroupEpicIssuesStream(GroupBasedStream):
     """EpicIssues stream class."""
 
     name = "epic_issues"
-    path = "/groups/{group_path}/epics/{epic_iid}/issues"
+    path = "/groups/{group_id}/epics/{epic_iid}/issues"
     primary_keys = ["group_id", "epic_iid", "epic_issue_id"]
     parent_stream_type = GroupEpicsStream  # Stream should wait for parents to complete.
 
@@ -312,8 +350,9 @@ class GroupVariablesStream(GroupBasedStream):
     """Gitlab Group Variables stream."""
 
     name = "group_variables"
-    path = "/groups/{group_path}/variables"
+    path = "/groups/{group_id}/variables"
     primary_keys = ["project_id", "key"]
+    parent_stream_type = GroupsStream
 
 
 # Global streams
