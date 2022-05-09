@@ -2,6 +2,7 @@
 
 import datetime
 import os
+from typing import Any, Dict
 
 from dotenv import load_dotenv
 
@@ -11,7 +12,8 @@ from tap_gitlab.tap import TapGitLab, OPTIN_STREAM_NAMES
 
 load_dotenv()  # Import any environment variables from local `.env` file.
 
-SAMPLE_CONFIG = {
+PREFIX = "TAP_GITLAB_"
+SAMPLE_CONFIG: Dict[str, Any] = {
     "start_date": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d"),
     "private_token": os.getenv(
         "TAP_GITLAB_PRIVATE_TOKEN", os.getenv("GITLAB_PRIVATE_TOKEN")
@@ -21,6 +23,12 @@ SAMPLE_CONFIG = {
         os.getenv("GITLAB_PROJECTS_TO_FETCH", "meltano/demo-project"),
     ),
 }
+for k, v in os.environ.items():
+    if k.startswith(PREFIX):
+        if v.lower() == "false":
+            SAMPLE_CONFIG[k.lstrip(PREFIX).lower()] = False
+        elif v.lower() == "true":
+            SAMPLE_CONFIG[k.lstrip(PREFIX).lower()] = True
 
 
 # Run standard built-in tap tests from the SDK:
