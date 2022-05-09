@@ -3,14 +3,23 @@
 import datetime
 import os
 
+from dotenv import load_dotenv
+
 from singer_sdk.testing import get_standard_tap_tests
 
-from tap_gitlab.tap import TapGitLab
+from tap_gitlab.tap import TapGitLab, OPTIN_STREAM_NAMES
+
+load_dotenv()  # Import any environment variables from local `.env` file.
 
 SAMPLE_CONFIG = {
     "start_date": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d"),
-    "private_token": os.getenv("GITLAB_PRIVATE_TOKEN"),
-    "projects": os.getenv("GITLAB_PROJECTS_TO_FETCH", ""),
+    "private_token": os.getenv(
+        "TAP_GITLAB_PRIVATE_TOKEN", os.getenv("GITLAB_PRIVATE_TOKEN")
+    ),
+    "projects": os.getenv(
+        "TAP_GITLAB_PROJECTS_TO_FETCH",
+        os.getenv("GITLAB_PROJECTS_TO_FETCH", "meltano/demo-project"),
+    ),
 }
 
 
@@ -22,4 +31,9 @@ def test_standard_tap_tests():
         test()
 
 
-# TODO: Create additional tests as appropriate for your tap.
+#       https://gitlab.com/meltano/sdk/-/merge_requests/265
+def test_tap_config_defaults():
+    """Run standard tap tests from the SDK."""
+    tap = TapGitLab(config=SAMPLE_CONFIG, parse_env_config=True)
+    for optin_stream in OPTIN_STREAM_NAMES:
+        assert f"pull_{optin_stream}" in tap.config
