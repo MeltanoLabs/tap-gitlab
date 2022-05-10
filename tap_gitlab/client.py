@@ -36,8 +36,12 @@ class GitLabStream(RESTStream):
 
         If no path is provided, the base URL will be appended with `/api/v4`.
         E.g. 'https://gitlab.com' would become 'https://gitlab.com/api/v4'
+
+        Note: trailing slashes ('/') are scrubbed prior to comparison, so that
+        'https://gitlab.com` is equivalent to 'https://gitlab.com/' and
+        'https://gitlab.com/api/v4' is equivalent to 'https://gitlab.com/api/v4/'.
         """
-        result = self.config.get("api_url", DEFAULT_API_URL)
+        result = self.config.get("api_url", DEFAULT_API_URL).rstrip("/")
         if "/" not in result.replace("://", ""):
             # If not path part is provided, append the v4 endpoint info.
             result += "/api/v4"
