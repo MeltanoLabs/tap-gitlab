@@ -61,12 +61,13 @@ class IssuesStream(ProjectBasedStream):
     """Gitlab Issues stream."""
 
     name = "issues"
-    parent_stream_type = ProjectsStream
     path = "/projects/{project_id}/issues"
     primary_keys = ["id"]
     replication_key = "updated_at"
-    bookmark_param_name = "updated_after"
     is_sorted = True
+    parent_stream_type = ProjectsStream
+
+    bookmark_param_name = "updated_after"
     extra_url_params = {"scope": "all"}
 
     def post_process(self, row: dict, context: Optional[dict] = None) -> Optional[dict]:
@@ -83,10 +84,11 @@ class ProjectMergeRequestsStream(ProjectBasedStream):
     """Gitlab Merge Requests stream."""
 
     name = "merge_requests"
-    parent_stream_type = ProjectsStream
     path = "/projects/{project_id}/merge_requests"
     primary_keys = ["id"]
     replication_key = "updated_at"
+    parent_stream_type = ProjectsStream
+
     bookmark_param_name = "updated_after"
     extra_url_params = {"scope": "all"}
 
@@ -127,11 +129,12 @@ class CommitsStream(ProjectBasedStream):
     """Gitlab Commits stream."""
 
     name = "commits"
-    parent_stream_type = ProjectsStream
     path = "/projects/{project_id}/repository/commits"
     primary_keys = ["id"]
     replication_key = "created_at"
     is_sorted = False
+    parent_stream_type = ProjectsStream
+
     extra_url_params = {"with_stats": "true"}
 
 
@@ -163,8 +166,9 @@ class PipelinesStream(ProjectBasedStream):
     path = "/projects/{project_id}/pipelines"
     primary_keys = ["id"]
     replication_key = "updated_at"
-    bookmark_param_name = "updated_after"
     parent_stream_type = ProjectsStream
+
+    bookmark_param_name = "updated_after"
 
     def get_child_context(self, record: dict, context: Optional[dict]) -> dict:
         """Perform post processing, including queuing up any child stream types."""
