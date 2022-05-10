@@ -92,16 +92,6 @@ class ProjectMergeRequestsStream(ProjectBasedStream):
     bookmark_param_name = "updated_after"
     extra_url_params = {"scope": "all"}
 
-    def get_child_context(self, record: dict, context: Optional[dict]) -> dict:
-        """Perform post processing, including queuing up any child stream types."""
-        # Ensure child state record(s) are created
-        assert context is not None
-        return {
-            "project_path": context["project_path"],
-            "project_id": record["project_id"],
-            "merge_request_id": record["iid"],
-        }
-
     def post_process(self, row: dict, context: Optional[dict] = None) -> Optional[dict]:
         """Post process records."""
         result = super().post_process(row, context)
@@ -123,6 +113,25 @@ class ProjectMergeRequestsStream(ProjectBasedStream):
             result[time_key] = time_stats.get(time_key, None)
 
         return result
+
+    def get_child_context(self, record: dict, context: Optional[dict]) -> dict:
+        """Perform post processing, including queuing up any child stream types."""
+        # Ensure child state record(s) are created
+        assert context is not None
+        return {
+            "project_path": context["project_path"],
+            "project_id": record["project_id"],
+            "merge_request_iid": record["iid"],
+        }
+
+
+class MergeRequestCommitsStream(ProjectBasedStream):
+    """Gitlab Commits stream."""
+
+    name = "merge_request_commits"
+    path = "/projects/{project_id}/merge_requests/{merge_request_id}/commits"
+    primary_keys = ["project_id", "merge_request_iid", "commit_id"]
+    parent_stream_type = ProjectMergeRequestsStream
 
 
 class CommitsStream(ProjectBasedStream):
@@ -203,15 +212,6 @@ class ProjectMilestonesStream(ProjectBasedStream):
     primary_keys = ["id"]
     schema_filename = "milestones.json"
     parent_stream_type = ProjectsStream
-
-
-class MergeRequestCommitsStream(ProjectBasedStream):
-    """Gitlab Commits stream."""
-
-    name = "merge_request_commits"
-    path = "/projects/{project_id}/merge_requests/{merge_request_id}/commits"
-    primary_keys = ["project_id", "merge_request_iid", "commit_id"]
-    parent_stream_type = ProjectMergeRequestsStream
 
 
 class ProjectUsersStream(ProjectBasedStream):
