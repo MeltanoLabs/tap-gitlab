@@ -76,7 +76,8 @@ class GitLabStream(RESTStream):
     ) -> Dict[str, Any]:
         """Return a dictionary of values to be used in URL parameterization."""
         # If the class has extra default params, start with those:
-        params: dict = self.extra_url_params
+        # TODO: SDK Bug: without copy(), this will leak params across classes/objects.
+        params: dict = copy.copy(self.extra_url_params)
 
         if next_page_token:
             params["page"] = next_page_token
