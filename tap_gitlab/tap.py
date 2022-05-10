@@ -148,7 +148,7 @@ class TapGitLab(Tap):
         If any streams are disabled in settings, they will not be exposed here during
         discovery.
         """
-        setup_requests_cache(dict(self.config))
+        setup_requests_cache(dict(self.config), self.logger)
 
         stream_types: List[type] = []
         for _, module_class in inspect.getmembers(streams, inspect.isclass):
