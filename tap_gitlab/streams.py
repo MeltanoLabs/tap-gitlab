@@ -367,22 +367,20 @@ class GlobalSiteUsersStream(GitLabStream):
     schema_filename = "users.json"
 
 
-# TODO: Failing with:
-# FatalAPIError: 400 Client Error: Bad Request for path:
-# /projects/{project_path}/releases
-# class ReleasesStream(ProjectBasedStream):
-#     """Gitlab Releases stream."""
+class TagsStream(ProjectBasedStream):
+    """Gitlab Tags stream."""
 
-#     name = "releases"
-#     path = "/projects/{project_path}/releases"
-#     primary_keys = ["project_id", "commit_id", "tag_name"]
-#     replication_key = None
+    name = "tags"
+    path = "/projects/{project_path}/repository/tags"
+    primary_keys = ["project_id", "commit_id", "name"]
+    parent_stream_type = ProjectsStream
 
 
-# TODO: Failing with:
-# FatalAPIError: 400 Client Error: Bad Request for path:
-# /projects/{project_path}/repository/tags
-# class TagsStream(ProjectBasedStream):
-#     name = "tags"
-#     path = "/projects/{project_path}/repository/tags"
-#     primary_keys = ["project_id", "commit_id", "name"]
+class ReleasesStream(ProjectBasedStream):
+    """Gitlab Releases stream."""
+
+    name = "releases"
+    path = "/projects/{project_path}/releases"
+    primary_keys = ["project_id", "commit_id", "tag_name"]
+    replication_key = None
+    parent_stream_type = ProjectsStream
