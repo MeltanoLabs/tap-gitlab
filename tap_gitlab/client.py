@@ -27,6 +27,8 @@ class GitLabStream(RESTStream):
     next_page_token_jsonpath = "$.X-Next-Page"
     extra_url_params: dict = {}
     bookmark_param_name = "since"
+    _LOG_REQUEST_METRIC_URLS = True  # Okay to print in logs
+    # sensitive_request_path = False  # TODO: Update SDK to accept this instead.
 
     @property
     def url_base(self) -> str:
