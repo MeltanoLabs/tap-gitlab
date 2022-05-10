@@ -129,7 +129,7 @@ class MergeRequestCommitsStream(ProjectBasedStream):
     """Gitlab Commits stream."""
 
     name = "merge_request_commits"
-    path = "/projects/{project_id}/merge_requests/{merge_request_id}/commits"
+    path = "/projects/{project_id}/merge_requests/{merge_request_iid}/commits"
     primary_keys = ["project_id", "merge_request_iid", "commit_id"]
     parent_stream_type = ProjectMergeRequestsStream
 
