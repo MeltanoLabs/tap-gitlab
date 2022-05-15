@@ -13,7 +13,8 @@ load_dotenv()  # Import any environment variables from local `.env` file.
 
 PREFIX = "TAP_GITLAB_"
 SAMPLE_CONFIG: Dict[str, Any] = {
-    "start_date": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d"),
+    "start_date": "2022-03-01T00:00:00Z",
+    # "start_date": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d"),
     "private_token": os.getenv("TAP_GITLAB_PRIVATE_TOKEN"),
     "projects": os.getenv("TAP_GITLAB_PROJECTS", "meltano/demo-project"),
     "groups": os.getenv("TAP_GITLAB_GROUPS", "meltano/infra"),

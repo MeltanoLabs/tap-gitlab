@@ -45,6 +45,10 @@ class ProjectsStream(ProjectBasedStream):
         if result is None:
             return None
 
+        if "last_activity_at" not in result:
+            raise ValueError(
+                f"Missing 'last_activity_at' field for project '{self.path}'."
+            )
         result["owner_id"] = pop_nested_id(result, "owner")
         return result
 
@@ -132,6 +136,20 @@ class MergeRequestCommitsStream(ProjectBasedStream):
     path = "/projects/{project_id}/merge_requests/{merge_request_iid}/commits"
     primary_keys = ["project_id", "merge_request_iid", "commit_id"]
     parent_stream_type = ProjectMergeRequestsStream
+
+    def post_process(self, row: dict, context: Optional[dict] = None) -> Optional[dict]:
+        """Post process records."""
+        result = super().post_process(row, context)
+        if result is None:
+            return None
+
+        for orig, renamed in {"id": "commit_id", "short_id": "commit_short_id"}.items():
+            try:
+                result[renamed] = result.pop(orig)
+            except KeyError as ex:
+                raise KeyError(f"Missing property '{orig}' in record: {result}") from ex
+
+        return result
 
 
 class CommitsStream(ProjectBasedStream):
@@ -255,7 +273,7 @@ class ProjectVariablesStream(ProjectBasedStream):
 
     name = "project_variables"
     path = "/projects/{project_id}/variables"
-    primary_keys = ["group_id", "key"]
+    primary_keys = ["project_id", "key"]
     parent_stream_type = ProjectsStream
 
 
@@ -268,6 +286,15 @@ class GroupsStream(GroupBasedStream):
     name = "groups"
     path = "/groups/{group_path}"
     primary_keys = ["id"]
+
+    def get_child_context(self, record: dict, context: Optional[dict]) -> dict:
+        """Perform post processing, including queuing up any child stream types."""
+        # Ensure child state record(s) are created
+        assert context is not None
+        return {
+            "group_path": context["group_path"],
+            "group_id": record["id"],
+        }
 
 
 class GroupProjectsStream(GroupBasedStream):

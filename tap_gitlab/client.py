@@ -25,7 +25,7 @@ class GitLabStream(RESTStream):
 
     records_jsonpath = "$[*]"
     next_page_token_jsonpath = "$.X-Next-Page"
-    extra_url_params: dict = {}
+    extra_url_params: Optional[dict] = None
     bookmark_param_name = "since"
     _LOG_REQUEST_METRIC_URLS = True  # Okay to print in logs
     # sensitive_request_path = False  # TODO: Update SDK to accept this instead.
@@ -81,7 +81,7 @@ class GitLabStream(RESTStream):
         """Return a dictionary of values to be used in URL parameterization."""
         # If the class has extra default params, start with those:
         # TODO: SDK Bug: without copy(), this will leak params across classes/objects.
-        params: dict = copy.copy(self.extra_url_params)
+        params: dict = copy.copy(self.extra_url_params or {})
 
         if next_page_token:
             params["page"] = next_page_token
@@ -120,6 +120,21 @@ class GitLabStream(RESTStream):
                     )
 
         return url
+
+    def post_process(self, row: dict, context: Optional[dict] = None) -> Optional[dict]:
+        """Post process records."""
+        result = super().post_process(row, context)
+        del row
+        if result is None:
+            return None
+
+        assert context is not None  # All streams have parent or partitions
+
+        for key, val in context.items():
+            if key in self.schema.get("properties", {}) and key not in result:
+                result[key] = val
+
+        return result
 
 
 class ProjectBasedStream(GitLabStream):

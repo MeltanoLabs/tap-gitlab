@@ -44,8 +44,16 @@ plugins:
     - name: requests_cache_path
       kind: string
     config:
-      start_date: '2010-01-01T00:00:00Z'
+      projects: meltano/demo-project
+      start_date: '2022-03-01T00:00:00Z'
+      requests_cache_path: ./api_caches
+    select:
+    - "*.*"
+    - "!jobs"  # very slow
   loaders:
   - name: target-jsonl
     variant: andyh1203
     pip_url: target-jsonl
+  - name: target-sqlite
+    variant: meltanolabs
+    pip_url: git+https://github.com/MeltanoLabs/target-sqlite.git
