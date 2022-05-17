@@ -396,6 +396,15 @@ class TagsStream(ProjectBasedStream):
     primary_keys = ["project_id", "commit_id", "name"]
     parent_stream_type = ProjectsStream
 
+    def post_process(self, row: dict, context: Optional[dict] = None) -> Optional[dict]:
+        """Post process records."""
+        result = super().post_process(row, context)
+        if result is None:
+            return None
+
+        result["commit_id"] = result.pop("commit")["id"]
+        return result
+
 
 class ReleasesStream(ProjectBasedStream):
     """Gitlab Releases stream."""
