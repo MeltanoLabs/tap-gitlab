@@ -31,7 +31,11 @@ class TapGitLab(Tap):
             "api_url",
             th.StringType,
             required=False,
-            description="Optionally overrides the default base URL for the Gitlab API.",
+            description=(
+                "Optionally overrides the default base URL for the Gitlab API. "
+                "If no path is provided, the base URL will be appended with `/api/v4`. "
+                "E.g. 'https://gitlab.com' becomes 'https://gitlab.com/api/v4'."
+            ),
         ),
         th.Property(
             "private_token",
@@ -144,7 +148,7 @@ class TapGitLab(Tap):
         If any streams are disabled in settings, they will not be exposed here during
         discovery.
         """
-        setup_requests_cache(dict(self.config))
+        setup_requests_cache(dict(self.config), self.logger)
 
         stream_types: List[type] = []
         for _, module_class in inspect.getmembers(streams, inspect.isclass):

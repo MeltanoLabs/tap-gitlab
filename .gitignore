@@ -1,6 +1,9 @@
 # Secrets and internal config files
 **/.secrets/*
 
+# API cache
+api_caches
+
 # Ignore meltano internal cache and sqlite systemdb
 .meltano/
 

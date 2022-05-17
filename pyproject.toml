@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "tap-gitlab"
-version = "0.0.1"
+version = "2.0.0-alpha3"
 description = "`tap-gitlab` is a Singer tap for GitLab, built with the Meltano SDK for Singer Taps."
 authors = ["Meltano and Meltano Community"]
 keywords = [

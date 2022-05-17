@@ -1,6 +1,6 @@
 """Stream type classes for tap-gitlab."""
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional, cast
 
 from tap_gitlab.client import GitLabStream, GroupBasedStream, ProjectBasedStream
 from tap_gitlab.transforms import object_array_to_id_array, pop_nested_id
@@ -18,18 +18,37 @@ class ProjectsStream(ProjectBasedStream):
     is_sorted = True
     extra_url_params = {"statistics": 1}
 
+    @property
+    def partitions(self) -> List[dict]:
+        """Return a list of partition key dicts (if applicable), otherwise None."""
+        if "{project_path}" in self.path:
+            if "projects" not in self.config:
+                raise ValueError(
+                    f"Missing `projects` setting which is required for the "
+                    f"'{self.name}' stream."
+                )
+
+        return [
+            {"project_path": id}
+            for id in cast(list, self.config["projects"].split(" "))
+        ]
+
     def post_process(self, row: dict, context: Optional[dict] = None) -> Optional[dict]:
         """Post process records."""
         result = super().post_process(row, context)
         if result is None:
             return None
 
+        if "last_activity_at" not in result:
+            raise ValueError(
+                f"Missing 'last_activity_at' field for project '{self.path}'."
+            )
         result["owner_id"] = pop_nested_id(result, "owner")
         return result
 
     def get_child_context(self, record: dict, context: Optional[dict]) -> dict:
         """Perform post processing, including queuing up any child stream types."""
-        assert context is not None
+        assert context is not None  # Tell linter that context is non-null
         return {
             "project_id": record["id"],
             "project_path": context["project_path"],
@@ -40,11 +59,13 @@ class IssuesStream(ProjectBasedStream):
     """Gitlab Issues stream."""
 
     name = "issues"
-    path = "/projects/{project_path}/issues"
+    path = "/projects/{project_id}/issues"
     primary_keys = ["id"]
     replication_key = "updated_at"
-    bookmark_param_name = "updated_after"
     is_sorted = True
+    parent_stream_type = ProjectsStream
+
+    bookmark_param_name = "updated_after"
     extra_url_params = {"scope": "all"}
 
     def post_process(self, row: dict, context: Optional[dict] = None) -> Optional[dict]:
@@ -61,21 +82,13 @@ class ProjectMergeRequestsStream(ProjectBasedStream):
     """Gitlab Merge Requests stream."""
 
     name = "merge_requests"
-    path = "/projects/{project_path}/merge_requests"
+    path = "/projects/{project_id}/merge_requests"
     primary_keys = ["id"]
     replication_key = "updated_at"
+    parent_stream_type = ProjectsStream
+
     bookmark_param_name = "updated_after"
     extra_url_params = {"scope": "all"}
-
-    def get_child_context(self, record: dict, context: Optional[dict]) -> dict:
-        """Perform post processing, including queuing up any child stream types."""
-        # Ensure child state record(s) are created
-        assert context is not None
-        return {
-            "project_path": context["project_path"],
-            "project_id": record["project_id"],
-            "merge_request_id": record["iid"],
-        }
 
     def post_process(self, row: dict, context: Optional[dict] = None) -> Optional[dict]:
         """Post process records."""
@@ -99,26 +112,24 @@ class ProjectMergeRequestsStream(ProjectBasedStream):
 
         return result
 
+    def get_child_context(self, record: dict, context: Optional[dict]) -> dict:
+        """Perform post processing, including queuing up any child stream types."""
+        # Ensure child state record(s) are created
+        assert context is not None  # Tell linter that context is non-null
+        return {
+            "project_path": context["project_path"],
+            "project_id": record["project_id"],
+            "merge_request_iid": record["iid"],
+        }
 
-class CommitsStream(ProjectBasedStream):
+
+class MergeRequestCommitsStream(ProjectBasedStream):
     """Gitlab Commits stream."""
 
-    name = "commits"
-    path = "/projects/{project_path}/repository/commits"
-    primary_keys = ["id"]
-    replication_key = "created_at"
-    is_sorted = False
-    extra_url_params = {"with_stats": "true"}
-
-
-class BranchesStream(ProjectBasedStream):
-    """Gitlab Branches stream."""
-
-    name = "branches"
-    path = "/projects/{project_path}/repository/branches"
-    primary_keys = ["project_id", "name"]
-    # TODO: Research why this fails:
-    # parent_stream_type = ProjectsStream
+    name = "merge_request_commits"
+    path = "/projects/{project_id}/merge_requests/{merge_request_iid}/commits"
+    primary_keys = ["project_id", "merge_request_iid", "commit_id"]
+    parent_stream_type = ProjectMergeRequestsStream
 
     def post_process(self, row: dict, context: Optional[dict] = None) -> Optional[dict]:
         """Post process records."""
@@ -126,10 +137,45 @@ class BranchesStream(ProjectBasedStream):
         if result is None:
             return None
 
-        assert context is not None
+        for orig, renamed in {"id": "commit_id", "short_id": "commit_short_id"}.items():
+            try:
+                result[renamed] = result.pop(orig)
+            except KeyError as ex:
+                raise KeyError(f"Missing property '{orig}' in record: {result}") from ex
 
-        # TODO: Uncomment when parent relationship works
-        # result["project_id"] = context["project_id"]
+        return result
+
+
+class CommitsStream(ProjectBasedStream):
+    """Gitlab Commits stream."""
+
+    name = "commits"
+    path = "/projects/{project_id}/repository/commits"
+    primary_keys = ["id"]
+    replication_key = "created_at"
+    is_sorted = False
+    parent_stream_type = ProjectsStream
+
+    extra_url_params = {"with_stats": "true"}
+
+
+class BranchesStream(ProjectBasedStream):
+    """Gitlab Branches stream."""
+
+    name = "branches"
+    path = "/projects/{project_id}/repository/branches"
+    primary_keys = ["project_id", "name"]
+    parent_stream_type = ProjectsStream
+
+    def post_process(self, row: dict, context: Optional[dict] = None) -> Optional[dict]:
+        """Post process records."""
+        result = super().post_process(row, context)
+        if result is None:
+            return None
+
+        assert context is not None  # Tell linter that context is non-null
+
+        result["project_id"] = context["project_id"]
         result["commit_id"] = pop_nested_id(result, "commit")
         return result
 
@@ -138,9 +184,11 @@ class PipelinesStream(ProjectBasedStream):
     """Gitlab Pipelines stream."""
 
     name = "pipelines"
-    path = "/projects/{project_path}/pipelines"
+    path = "/projects/{project_id}/pipelines"
     primary_keys = ["id"]
     replication_key = "updated_at"
+    parent_stream_type = ProjectsStream
+
     bookmark_param_name = "updated_after"
 
     def get_child_context(self, record: dict, context: Optional[dict]) -> dict:
@@ -154,7 +202,7 @@ class PipelinesExtendedStream(ProjectBasedStream):
     """Gitlab extended Pipelines stream."""
 
     name = "pipelines_extended"
-    path = "/projects/{project_path}/pipelines/{pipeline_id}"
+    path = "/projects/{project_id}/pipelines/{pipeline_id}"
     primary_keys = ["id"]
     parent_stream_type = PipelinesStream
 
@@ -163,7 +211,7 @@ class PipelineJobsStream(ProjectBasedStream):
     """Gitlab Pipeline Jobs stream."""
 
     name = "jobs"
-    path = "/projects/{project_path}/pipelines/{pipeline_id}/jobs"
+    path = "/projects/{project_id}/pipelines/{pipeline_id}/jobs"
     primary_keys = ["id"]
     parent_stream_type = PipelinesStream  # Stream should wait for parents to complete.
 
@@ -172,58 +220,55 @@ class ProjectMilestonesStream(ProjectBasedStream):
     """Gitlab Project Milestones stream."""
 
     name = "project_milestones"
-    path = "/projects/{project_path}/milestones"
+    path = "/projects/{project_id}/milestones"
     primary_keys = ["id"]
     schema_filename = "milestones.json"
-
-
-class MergeRequestCommitsStream(ProjectBasedStream):
-    """Gitlab Commits stream."""
-
-    name = "merge_request_commits"
-    path = "/projects/{project_path}/merge_requests/{merge_request_id}/commits"
-    primary_keys = ["project_id", "merge_request_iid", "commit_id"]
-    parent_stream_type = ProjectMergeRequestsStream
+    parent_stream_type = ProjectsStream
 
 
 class ProjectUsersStream(ProjectBasedStream):
     """Gitlab Project Users stream."""
 
     name = "users"
-    path = "/projects/{project_path}/users"
+    path = "/projects/{project_id}/users"
     primary_keys = ["id"]
+    parent_stream_type = ProjectsStream
 
 
 class ProjectMembersStream(ProjectBasedStream):
     """Gitlab Project Members stream."""
 
     name = "project_members"
-    path = "/projects/{project_path}/members"
+    path = "/projects/{project_id}/members"
     primary_keys = ["project_id", "id"]
+    parent_stream_type = ProjectsStream
 
 
 class ProjectLabelsStream(ProjectBasedStream):
     """Gitlab Project Labels stream."""
 
     name = "project_labels"
-    path = "/projects/{project_path}/labels"
+    path = "/projects/{project_id}/labels"
     primary_keys = ["project_id", "id"]
+    parent_stream_type = ProjectsStream
 
 
 class ProjectVulnerabilitiesStream(ProjectBasedStream):
     """Project Vulnerabilities stream."""
 
     name = "vulnerabilities"
-    path = "/projects/{project_path}/vulnerabilities"
+    path = "/projects/{project_id}/vulnerabilities"
     primary_keys = ["id"]
+    parent_stream_type = ProjectsStream
 
 
 class ProjectVariablesStream(ProjectBasedStream):
     """Project Variables stream."""
 
     name = "project_variables"
-    path = "/projects/{project_path}/variables"
-    primary_keys = ["group_id", "key"]
+    path = "/projects/{project_id}/variables"
+    primary_keys = ["project_id", "key"]
+    parent_stream_type = ProjectsStream
 
 
 # Group-Specific Streams
@@ -236,6 +281,14 @@ class GroupsStream(GroupBasedStream):
     path = "/groups/{group_path}"
     primary_keys = ["id"]
 
+    def get_child_context(self, record: dict, context: Optional[dict]) -> dict:
+        """Perform post processing, including queuing up any child stream types."""
+        assert context is not None  # Tell linter that context is non-null
+        return {
+            "group_path": context["group_path"],
+            "group_id": record["id"],
+        }
+
 
 class GroupProjectsStream(GroupBasedStream):
     """Gitlab Projects stream."""
@@ -243,6 +296,7 @@ class GroupProjectsStream(GroupBasedStream):
     name = "group_projects"
     path = "/groups/{group_path}/projects"
     primary_keys = ["id"]
+    parent_stream_type = GroupsStream
 
 
 class GroupMilestonesStream(GroupBasedStream):
@@ -252,6 +306,7 @@ class GroupMilestonesStream(GroupBasedStream):
     path = "/groups/{group_path}/milestones"
     primary_keys = ["id"]
     schema_filename = "milestones.json"
+    parent_stream_type = GroupsStream
 
 
 class GroupMembersStream(GroupBasedStream):
@@ -260,6 +315,7 @@ class GroupMembersStream(GroupBasedStream):
     name = "group_members"
     path = "/groups/{group_path}/members"
     primary_keys = ["group_id", "id"]
+    parent_stream_type = GroupsStream
 
 
 class GroupLabelsStream(GroupBasedStream):
@@ -268,6 +324,7 @@ class GroupLabelsStream(GroupBasedStream):
     name = "group_labels"
     path = "/groups/{group_path}/labels"
     primary_keys = ["group_id", "id"]
+    parent_stream_type = GroupsStream
 
 
 class GroupEpicsStream(GroupBasedStream):
@@ -278,6 +335,7 @@ class GroupEpicsStream(GroupBasedStream):
     primary_keys = ["id"]
     replication_key = "updated_at"
     bookmark_param_name = "updated_after"
+    parent_stream_type = GroupsStream
 
     def get_child_context(self, record: dict, context: Optional[dict]) -> dict:
         """Perform post processing, including queuing up any child stream types."""
@@ -294,7 +352,7 @@ class GroupEpicIssuesStream(GroupBasedStream):
     """EpicIssues stream class."""
 
     name = "epic_issues"
-    path = "/groups/{group_path}/epics/{epic_iid}/issues"
+    path = "/groups/{group_id}/epics/{epic_iid}/issues"
     primary_keys = ["group_id", "epic_iid", "epic_issue_id"]
     parent_stream_type = GroupEpicsStream  # Stream should wait for parents to complete.
 
@@ -312,8 +370,9 @@ class GroupVariablesStream(GroupBasedStream):
     """Gitlab Group Variables stream."""
 
     name = "group_variables"
-    path = "/groups/{group_path}/variables"
+    path = "/groups/{group_id}/variables"
     primary_keys = ["project_id", "key"]
+    parent_stream_type = GroupsStream
 
 
 # Global streams
@@ -328,22 +387,38 @@ class GlobalSiteUsersStream(GitLabStream):
     schema_filename = "users.json"
 
 
-# TODO: Failing with:
-# FatalAPIError: 400 Client Error: Bad Request for path:
-# /projects/{project_path}/releases
-# class ReleasesStream(ProjectBasedStream):
-#     """Gitlab Releases stream."""
+class TagsStream(ProjectBasedStream):
+    """Gitlab Tags stream."""
 
-#     name = "releases"
-#     path = "/projects/{project_path}/releases"
-#     primary_keys = ["project_id", "commit_id", "tag_name"]
-#     replication_key = None
+    name = "tags"
+    path = "/projects/{project_path}/repository/tags"
+    primary_keys = ["project_id", "commit_id", "name"]
+    parent_stream_type = ProjectsStream
+
+    def post_process(self, row: dict, context: Optional[dict] = None) -> Optional[dict]:
+        """Post process records."""
+        result = super().post_process(row, context)
+        if result is None:
+            return None
+
+        result["commit_id"] = result.pop("commit")["id"]
+        return result
 
 
-# TODO: Failing with:
-# FatalAPIError: 400 Client Error: Bad Request for path:
-# /projects/{project_path}/repository/tags
-# class TagsStream(ProjectBasedStream):
-#     name = "tags"
-#     path = "/projects/{project_path}/repository/tags"
-#     primary_keys = ["project_id", "commit_id", "name"]
+class ReleasesStream(ProjectBasedStream):
+    """Gitlab Releases stream."""
+
+    name = "releases"
+    path = "/projects/{project_path}/releases"
+    primary_keys = ["project_id", "commit_id", "tag_name"]
+    replication_key = None
+    parent_stream_type = ProjectsStream
+
+    def post_process(self, row: dict, context: Optional[dict] = None) -> Optional[dict]:
+        """Post process records."""
+        result = super().post_process(row, context)
+        if result is None:
+            return None
+
+        result["commit_id"] = result.pop("commit")["id"]
+        return result
