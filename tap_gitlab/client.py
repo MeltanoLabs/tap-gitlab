@@ -7,6 +7,7 @@ import urllib
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union, cast
+from urllib.parse import urlparse
 
 import requests
 from singer_sdk.authenticators import APIKeyAuthenticator
@@ -41,9 +42,12 @@ class GitLabStream(RESTStream):
         'https://gitlab.com` is equivalent to 'https://gitlab.com/' and
         'https://gitlab.com/api/v4' is equivalent to 'https://gitlab.com/api/v4/'.
         """
+        # Remove trailing '/' from url base.
         result = self.config.get("api_url", DEFAULT_API_URL).rstrip("/")
-        if "/" not in result.replace("://", ""):
-            # If not path part is provided, append the v4 endpoint info.
+
+        # If path part is not provided, append the v4 endpoint as default:
+        # For example 'https://gitlab.com' => 'https://gitlab.com/api/v4'
+        if not urlparse(result).path:
             result += "/api/v4"
         return result
 
