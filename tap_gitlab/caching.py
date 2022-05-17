@@ -1,6 +1,7 @@
 """Test suite for tap-github."""
 
 import logging
+import os
 
 import requests_cache
 
@@ -13,7 +14,13 @@ def setup_requests_cache(tap_config: dict, logger: logging.Logger) -> None:
     if not cache_path_root:
         return
 
-    logger.info(f"Request caching is enabled at: {cache_path_root}")
+    if os.path.exists(cache_path_root):
+        num_files = len(os.listdir(cache_path_root))
+
+    logger.info(
+        f"Request caching is enabled at '{cache_path_root}'. "
+        f"Found {num_files:,} cache resources during setup."
+    )
 
     requests_cache.install_cache(
         cache_path_root,
