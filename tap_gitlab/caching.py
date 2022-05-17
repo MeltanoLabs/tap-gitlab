@@ -14,6 +14,7 @@ def setup_requests_cache(tap_config: dict, logger: logging.Logger) -> None:
     if not cache_path_root:
         return
 
+    num_files = 0
     if os.path.exists(cache_path_root):
         num_files = len(os.listdir(cache_path_root))
 
