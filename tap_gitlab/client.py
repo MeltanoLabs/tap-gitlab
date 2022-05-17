@@ -132,7 +132,7 @@ class GitLabStream(RESTStream):
         if result is None:
             return None
 
-        assert context is not None  # All streams have parent or partitions
+        assert context is not None  # Tell linter that context is non-null
 
         for key, val in context.items():
             if key in self.schema.get("properties", {}) and key not in result:

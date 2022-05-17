@@ -48,7 +48,7 @@ class ProjectsStream(ProjectBasedStream):
 
     def get_child_context(self, record: dict, context: Optional[dict]) -> dict:
         """Perform post processing, including queuing up any child stream types."""
-        assert context is not None
+        assert context is not None  # Tell linter that context is non-null
         return {
             "project_id": record["id"],
             "project_path": context["project_path"],
@@ -115,7 +115,7 @@ class ProjectMergeRequestsStream(ProjectBasedStream):
     def get_child_context(self, record: dict, context: Optional[dict]) -> dict:
         """Perform post processing, including queuing up any child stream types."""
         # Ensure child state record(s) are created
-        assert context is not None
+        assert context is not None  # Tell linter that context is non-null
         return {
             "project_path": context["project_path"],
             "project_id": record["project_id"],
@@ -173,7 +173,7 @@ class BranchesStream(ProjectBasedStream):
         if result is None:
             return None
 
-        assert context is not None
+        assert context is not None  # Tell linter that context is non-null
 
         result["project_id"] = context["project_id"]
         result["commit_id"] = pop_nested_id(result, "commit")
@@ -283,8 +283,7 @@ class GroupsStream(GroupBasedStream):
 
     def get_child_context(self, record: dict, context: Optional[dict]) -> dict:
         """Perform post processing, including queuing up any child stream types."""
-        # Ensure child state record(s) are created
-        assert context is not None
+        assert context is not None  # Tell linter that context is non-null
         return {
             "group_path": context["group_path"],
             "group_id": record["id"],
