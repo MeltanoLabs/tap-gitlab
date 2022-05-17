@@ -44,12 +44,13 @@ plugins:
     - name: requests_cache_path
       kind: string
     config:
-      projects: meltano/demo-project
+      projects: meltano/demo-project meltano/meltano
       start_date: '2022-03-01T00:00:00Z'
       requests_cache_path: ./api_caches
     select:
-    - "*.*"
-    - "!jobs"  # very slow
+    - '*.*'
+    - '!jobs'                 # Very slow
+    - '!pipelines_extended'   # Very slow
   loaders:
   - name: target-jsonl
     variant: andyh1203

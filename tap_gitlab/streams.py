@@ -28,16 +28,10 @@ class ProjectsStream(ProjectBasedStream):
                     f"'{self.name}' stream."
                 )
 
-            return [
-                {"project_path": id}
-                for id in cast(list, self.config["projects"].split(" "))
-            ]
-
-        raise ValueError(
-            "Could not detect partition type for Gitlab stream "
-            f"'{self.name}' ({self.path}). "
-            "Expected a URL path containing '{project_path}' or '{group_path}'. "
-        )
+        return [
+            {"project_path": id}
+            for id in cast(list, self.config["projects"].split(" "))
+        ]
 
     def post_process(self, row: dict, context: Optional[dict] = None) -> Optional[dict]:
         """Post process records."""
@@ -411,3 +405,12 @@ class ReleasesStream(ProjectBasedStream):
     primary_keys = ["project_id", "commit_id", "tag_name"]
     replication_key = None
     parent_stream_type = ProjectsStream
+
+    def post_process(self, row: dict, context: Optional[dict] = None) -> Optional[dict]:
+        """Post process records."""
+        result = super().post_process(row, context)
+        if result is None:
+            return None
+
+        result["commit_id"] = result.pop("commit")["id"]
+        return result
