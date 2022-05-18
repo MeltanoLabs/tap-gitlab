@@ -156,8 +156,17 @@ class GitLabStream(RESTStream):
         .. _requests.Response:
             https://docs.python-requests.org/en/latest/api/#requests.Response
         """
+
+        def _truthy(val: Any) -> bool:
+            if isinstance(val, str):
+                if val.lower() in ["false", "0"]:
+                    return False
+
+            # Convert val to bool
+            return not not val  # pylint: disable=C0113
+
         if (
-            self.config.get("ignore_access_denied", False)
+            _truthy(self.config.get("ignore_access_denied", False))
             and response.status_code == 401
         ):
             self.logger.info(

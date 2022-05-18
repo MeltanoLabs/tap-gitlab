@@ -140,7 +140,7 @@ class TapGitLab(Tap):
         ),
         th.Property(
             "ignore_access_denied",
-            th.StringType,
+            th.BooleanType,
             required=False,
             default=False,
             description=(
