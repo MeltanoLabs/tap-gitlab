@@ -84,6 +84,18 @@ Notes on group and project options:
 - If using the `--test=schema` option, some value (which is ignored) must be provided for the `projects` or `groups`
   settings or none of the corresponding streams will be included in the output.
 
+## Migration guide
+
+Coming from a prior version of this tap, here are some coniderations.
+
+1. Silent failures on access denied (401) errors.
+   - Prior versions of this tap would silently continue whenever a 401 error was received. To replicated this behavior, use the new `ignore_access_denied` config key.
+   - The long-term and proper fix is to deselect any streams you don't have access to, or else give elevated permissions (Maintaner, for instance) to the access token.
+2. Group and project streams when only `projects` or `groups` are specified.
+   - Prior versions of this tap would send schema messages for _both_ projects and schemas, regardless of whether both `groups` and `projects` config values were set. This would result in empty tables being created for project and groups, even if one of these had no data to sync.
+   - To replicate this behavior, provide both `groups` and `projects`. If you access token does not have full access to groups (for instance), refer to the guidance above to ignore access denied messages.
+   - The long-term and proper fix is to remove dependencies on `group` tables if group is not specified, and vice versa for `projects` if `projects` is not set.
+
 ## Installation
 
 ```bash
