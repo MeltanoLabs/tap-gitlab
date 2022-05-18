@@ -140,6 +140,34 @@ class GitLabStream(RESTStream):
 
         return result
 
+    def validate_response(self, response: requests.Response) -> None:
+        """Validate HTTP response.
+
+        Overrides the base class in order to ignore 401 access denied errors if the
+        config value 'ignore_access_denied' is True.
+
+        Args:
+            response: A `requests.Response`_ object.
+
+        Raises:
+            FatalAPIError: If the request is not retriable.
+            RetriableAPIError: If the request is retriable.
+
+        .. _requests.Response:
+            https://docs.python-requests.org/en/latest/api/#requests.Response
+        """
+        if (
+            self.config.get("ignore_access_denied", False)
+            and response.status_code == 401
+        ):
+            self.logger.info(
+                "Ignoring 401 access denied error "
+                "('ignore_access_denied' setting is True)."
+            )
+            return
+
+        super().validate_response(response)
+
 
 class ProjectBasedStream(GitLabStream):
     """Base class for streams that are keys based on project ID."""

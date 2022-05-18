@@ -138,6 +138,19 @@ class TapGitLab(Tap):
                 "recorded to this path as it is received."
             ),
         ),
+        th.Property(
+            "ignore_access_denied",
+            th.StringType,
+            required=False,
+            default=False,
+            description=(
+                "True to ignore access denied (HTTP 401) errors. This option is "
+                "provided for compatibility with prior versions of this tap, which "
+                "would silently move on to the next stream after receiving an access "
+                "denied error. If 'False', the tap will fail if access denied errors "
+                "are received for any selected streams."
+            ),
+        ),
     ).to_dict()
 
     def discover_streams(self) -> List[Stream]:
