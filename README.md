@@ -39,7 +39,7 @@ Built with the [Meltano SDK](https://sdk.meltano.com) for Singer Taps and Target
 | stream_map_config          | False    | None    | User-defined config values to be used within map expressions. |
 | flattening_enabled         | False    | None    | 'True' to enable schema flattening and automatically expand nested properties. |
 | flattening_max_depth       | False    | None    | The max depth to flatten schemas. |
-| ignore_access_denied       | False    | False   | True to ignore access denied (HTTP 401) errors. This option is provided for compatibility with prior versions of this tap, which would silently move on to the next stream after receiving an access denied error. If 'False', the tap will fail if access denied errors are received for any selected streams. |
+| ignore_access_denied       | False    | False   | True to ignore access denied (HTTP 401) errors. This option is provided for compatibility with prior versions of this tap, which would silently move on to the next stream after receiving an access denied error. If 'False' (the default), the tap will fail if access denied errors are received for any selected streams. |
 
 A full list of supported settings and capabilities is available by running: `tap-gitlab --about`
 
