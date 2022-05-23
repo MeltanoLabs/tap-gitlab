@@ -37,6 +37,7 @@ class ProjectsStream(ProjectBasedStream):
     is_sorted = True
     extra_url_params = {"statistics": 1}
     schema_filepath = None  # to allow the use of schema below
+    state_partitioning_keys = ["id"]
 
     @property
     def partitions(self) -> List[dict]:
@@ -262,6 +263,7 @@ class NoteableStream(NoSinceProjectBasedStream):
 
     schema = th.PropertiesList(  # type: ignore
         th.Property("id", th.IntegerType),
+        th.Property("project_id", th.IntegerType),
         th.Property("noteable_id", th.IntegerType),
         th.Property("noteable_iid", th.IntegerType),
         th.Property("noteable_type", th.StringType),
@@ -399,9 +401,10 @@ class MergeRequestCommitsStream(ProjectBasedStream):
     schema_filepath = None  # to allow the use of schema below
 
     schema = th.PropertiesList(  # type: ignore
-        th.Property("project_path", th.StringType),
-        th.Property("id", th.StringType),
-        th.Property("short_id", th.StringType),
+        th.Property("project_id", th.IntegerType),
+        th.Property("merge_request_iid", th.IntegerType),
+        th.Property("commit_id", th.StringType),
+        th.Property("commit_short_id", th.StringType),
         th.Property("created_at", th.DateTimeType),
         th.Property("parent_ids", th.ArrayType(th.StringType())),
         th.Property("title", th.StringType),
@@ -451,7 +454,7 @@ class CommitsStream(ProjectBasedStream):
     schema_filepath = None  # to allow the use of schema below
 
     schema = th.PropertiesList(  # type: ignore
-        th.Property("project_path", th.StringType),
+        th.Property("project_id", th.IntegerType),
         th.Property("id", th.StringType),
         th.Property("short_id", th.StringType),
         th.Property("created_at", th.DateTimeType),
@@ -574,6 +577,7 @@ class ProjectLabelsStream(ProjectBasedStream):
 
     schema = th.PropertiesList(  # type: ignore
         th.Property("id", th.IntegerType),
+        th.Property("project_id", th.IntegerType),
         th.Property("project_path", th.StringType),
         th.Property("name", th.StringType),
         th.Property("color", th.StringType),
@@ -706,7 +710,7 @@ class GroupVariablesStream(GroupBasedStream):
 
     name = "group_variables"
     path = "/groups/{group_id}/variables"
-    primary_keys = ["project_id", "key"]
+    primary_keys = ["group_id", "key"]
     parent_stream_type = GroupsStream
 
 

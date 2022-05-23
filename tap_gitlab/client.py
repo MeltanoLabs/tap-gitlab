@@ -145,7 +145,7 @@ class GitLabStream(RESTStream):
 class ProjectBasedStream(GitLabStream):
     """Base class for streams that are keys based on project ID."""
 
-    state_partitioning_keys = ["project_path"]
+    state_partitioning_keys = ["project_id"]
 
 
 class NoSinceProjectBasedStream(ProjectBasedStream):
@@ -191,7 +191,7 @@ class NoSinceProjectBasedStream(ProjectBasedStream):
 class GroupBasedStream(GitLabStream):
     """Base class for streams that are keys based on group ID."""
 
-    state_partitioning_keys = ["group_path"]
+    state_partitioning_keys = ["group_id"]
 
     @property
     def partitions(self) -> List[dict]:
@@ -211,5 +211,5 @@ class GroupBasedStream(GitLabStream):
         raise ValueError(
             "Could not detect partition type for Gitlab stream "
             f"'{self.name}' ({self.path}). "
-            "Expected a URL path containing '{project_path}' or '{group_path}'. "
+            "Expected a URL path containing '{project_path}' or '{group_id}'. "
         )
