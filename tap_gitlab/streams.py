@@ -157,8 +157,9 @@ class LanguagesStream(ProjectBasedStream):
 
     # docs: https://docs.gitlab.com/ee/api/projects.html#languages
     name = "languages"
-    path = "/projects/{project_path}/languages"
-    primary_keys = ["project_path", "language_name"]
+    path = "/projects/{project_id}/languages"
+    primary_keys = ["project_id", "language_name"]
+    parent_stream_type = ProjectsStream
     schema_filepath = None  # to allow the use of schema below
 
     def parse_response(self, response: requests.Response) -> Iterable[dict]:
@@ -173,7 +174,7 @@ class LanguagesStream(ProjectBasedStream):
             yield {"language_name": key, "percent": value}
 
     schema = th.PropertiesList(  # type: ignore
-        th.Property("project_path", th.StringType),
+        th.Property("project_id", th.StringType),
         th.Property("language_name", th.StringType),
         th.Property("percent", th.NumberType),
     ).to_dict()
@@ -252,9 +253,9 @@ class NoteableStream(NoSinceProjectBasedStream):
 
     primary_keys = ["id"]
     schema_filepath = None
-    # set this to project_path only to avoid saving a bookmark for each issue
+    # set this to project_id only to avoid saving a bookmark for each issue
     # which would result in the state object becoming unusably large
-    state_partitioning_keys = ["project_path"]
+    state_partitioning_keys = ["project_id"]
     extra_url_params = {"sort": "desc", "order_by": "updated_at"}
     replication_key = "updated_at"
     ignore_parent_replication_key = False
@@ -446,8 +447,33 @@ class CommitsStream(ProjectBasedStream):
     replication_key = "created_at"
     is_sorted = False
     parent_stream_type = ProjectsStream
-
     extra_url_params = {"with_stats": "true"}
+    schema_filepath = None  # to allow the use of schema below
+
+    schema = th.PropertiesList(  # type: ignore
+        th.Property("project_path", th.StringType),
+        th.Property("id", th.StringType),
+        th.Property("short_id", th.StringType),
+        th.Property("created_at", th.DateTimeType),
+        th.Property("parent_ids", th.ArrayType(th.StringType())),
+        th.Property("title", th.StringType),
+        th.Property("message", th.StringType),
+        th.Property("author_name", th.StringType),
+        th.Property("author_email", th.StringType),
+        th.Property("authored_date", th.DateTimeType),
+        th.Property("committer_name", th.StringType),
+        th.Property("committer_email", th.StringType),
+        th.Property("committed_date", th.DateTimeType),
+        th.Property("web_url", th.StringType),
+        th.Property(
+            "stats",
+            th.ObjectType(
+                th.Property("additions", th.IntegerType),
+                th.Property("deletions", th.IntegerType),
+                th.Property("total", th.IntegerType),
+            ),
+        ),
+    ).to_dict()
 
 
 class BranchesStream(ProjectBasedStream):
