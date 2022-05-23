@@ -19,6 +19,11 @@ SAMPLE_CONFIG: Dict[str, Any] = {
     "projects": os.getenv("TAP_GITLAB_PROJECTS", "meltano/demo-project"),
     "groups": os.getenv("TAP_GITLAB_GROUPS", "meltano/infra"),
 }
+
+assert (
+    SAMPLE_CONFIG["private_token"] is not None
+), "Please set TAP_GITLAB_PRIVATE_TOKEN in your env vars before running tests"
+
 for k, v in os.environ.items():
     if k.startswith(PREFIX):
         if v.lower() == "false":
