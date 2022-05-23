@@ -48,3 +48,28 @@ def test_tap_config_defaults():
     tap = TapGitLab(config=SAMPLE_CONFIG, parse_env_config=True)
     for optin_stream in OPTIN_STREAM_NAMES:
         assert f"fetch_{optin_stream}" in tap.config
+
+
+def test_pkeys_in_schema():
+    """Verify that primary keys are actually in the stream's schema."""
+    tap = TapGitLab(config=SAMPLE_CONFIG, parse_env_config=True)
+    for name, stream in tap.streams.items():
+        pkeys = stream.primary_keys or []
+        schema_props = set(stream.schema["properties"].keys())
+        for pkey in pkeys:
+            assert (
+                pkey in schema_props
+            ), f"Coding error in stream {name}: primary_key {pkey} is missing in schema"
+
+
+def test_state_partitioning_keys_in_schema():
+    """Verify that state partitioning keys are actually in the stream's schema."""
+    tap = TapGitLab(config=SAMPLE_CONFIG, parse_env_config=True)
+    for name, stream in tap.streams.items():
+        pkeys = stream.state_partitioning_keys or []
+        schema_props = set(stream.schema["properties"].keys())
+        for pkey in pkeys:
+            assert pkey in schema_props, (
+                f"Coding error in stream {name}: state_partitioning_key "
+                f"{pkey} is missing in schema"
+            )
