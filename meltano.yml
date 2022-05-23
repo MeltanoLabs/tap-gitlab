@@ -1,6 +1,6 @@
 version: 1
 send_anonymous_usage_stats: true
-project_id: tap-gitlab
+project_id: tap-gitlab--meltanolabs
 plugins:
   extractors:
   - name: tap-gitlab
@@ -12,11 +12,7 @@ plugins:
     - discover
     - about
     - stream-maps
-    - schema-flattening
-    config:
-      start_date: '2010-01-01T00:00:00Z'
     settings:
-    # TODO: To configure using Meltano, declare settings and their types here:
     - name: api_url
       kind: string
     - name: private_token
@@ -45,8 +41,20 @@ plugins:
       kind: boolean
     - name: flattening_max_depth
       kind: integer
-    
+    - name: requests_cache_path
+      kind: string
+    config:
+      projects: meltano/demo-project meltano/meltano
+      start_date: '2022-03-01T00:00:00Z'
+      requests_cache_path: ./api_caches
+    select:
+    - '*.*'
+    - '!jobs'                 # Very slow
+    - '!pipelines_extended'   # Very slow
   loaders:
   - name: target-jsonl
     variant: andyh1203
     pip_url: target-jsonl
+  - name: target-sqlite
+    variant: meltanolabs
+    pip_url: git+https://github.com/MeltanoLabs/target-sqlite.git
