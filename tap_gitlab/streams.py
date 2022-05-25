@@ -385,7 +385,7 @@ class MergeRequestNotesStream(NoteableStream):
 
     name = "merge_request_notes"
     parent_stream_type = ProjectMergeRequestsStream
-    path = "/projects/{project_path}/merge_requests/{merge_request_id}/notes"
+    path = "/projects/{project_path}/merge_requests/{merge_request_iid}/notes"
 
 
 class MergeRequestCommitsStream(ProjectBasedStream):
