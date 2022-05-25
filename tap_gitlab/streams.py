@@ -34,7 +34,7 @@ class ProjectsStream(ProjectBasedStream):
     path = "/projects/{project_path}"
     primary_keys = ["id"]
     replication_key = "last_activity_at"
-    is_sorted = True
+    is_sorted = False
     extra_url_params = {"statistics": 1}
     schema_filepath = None  # to allow the use of schema below
     state_partitioning_keys = ["id"]
