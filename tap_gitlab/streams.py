@@ -175,7 +175,7 @@ class LanguagesStream(ProjectBasedStream):
             yield {"language_name": key, "percent": value}
 
     schema = th.PropertiesList(  # type: ignore
-        th.Property("project_id", th.StringType),
+        th.Property("project_id", th.IntegerType),
         th.Property("language_name", th.StringType),
         th.Property("percent", th.NumberType),
     ).to_dict()
