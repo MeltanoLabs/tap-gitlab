@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
+import copy
+import urllib
+from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, cast
+from typing import Any, Dict, List, Optional, Union, cast
+from urllib.parse import urlparse
 
 import requests
 from singer_sdk.authenticators import APIKeyAuthenticator
@@ -22,13 +26,30 @@ class GitLabStream(RESTStream):
 
     records_jsonpath = "$[*]"
     next_page_token_jsonpath = "$.X-Next-Page"
-    extra_url_params: dict = {}
+    extra_url_params: Optional[dict] = None
     bookmark_param_name = "since"
+    _LOG_REQUEST_METRIC_URLS = True  # Okay to print in logs
+    # sensitive_request_path = False  # TODO: Update SDK to accept this instead.
 
     @property
     def url_base(self) -> str:
-        """Return the API URL root, configurable via tap settings."""
-        return self.config.get("api_url", DEFAULT_API_URL)
+        """Return the API URL root, configurable via tap settings.
+
+        If no path is provided, the base URL will be appended with `/api/v4`.
+        E.g. 'https://gitlab.com' would become 'https://gitlab.com/api/v4'
+
+        Note: trailing slashes ('/') are scrubbed prior to comparison, so that
+        'https://gitlab.com` is equivalent to 'https://gitlab.com/' and
+        'https://gitlab.com/api/v4' is equivalent to 'https://gitlab.com/api/v4/'.
+        """
+        # Remove trailing '/' from url base.
+        result = self.config.get("api_url", DEFAULT_API_URL).rstrip("/")
+
+        # If path part is not provided, append the v4 endpoint as default:
+        # For example 'https://gitlab.com' => 'https://gitlab.com/api/v4'
+        if not urlparse(result).path:
+            result += "/api/v4"
+        return result
 
     @property
     def schema_filename(self) -> str:
@@ -63,7 +84,8 @@ class GitLabStream(RESTStream):
     ) -> Dict[str, Any]:
         """Return a dictionary of values to be used in URL parameterization."""
         # If the class has extra default params, start with those:
-        params: dict = self.extra_url_params
+        # TODO: SDK Bug: without copy(), this will leak params across classes/objects.
+        params: dict = copy.copy(self.extra_url_params or {})
 
         if next_page_token:
             params["page"] = next_page_token
@@ -81,32 +103,48 @@ class GitLabStream(RESTStream):
         """Return token for identifying next page or None if not applicable."""
         return response.headers.get("X-Next-Page", None)
 
+    @staticmethod
+    def _url_encode(val: Union[str, datetime, bool, int, List[str]]) -> str:
+        """Encode the val argument as url-compatible string."""
+        return urllib.parse.quote_plus(str(val))
+
+    def get_url(self, context: Optional[dict]) -> str:
+        """Get stream entity URL."""
+        url = "".join([self.url_base, self.path or ""])
+        vals = copy.copy(dict(self.config))
+        vals.update(context or {})
+        for key, val in vals.items():
+            search_text = "".join(["{", key, "}"])
+            if search_text in url:
+                url = url.replace(search_text, self._url_encode(val))
+                if "{project_path}" in search_text:
+                    self.logger.info(
+                        f"DEBUG: Found project arg. URL is {url} after parsing "
+                        f"input val '{val}' to '{self._url_encode(val)}'."
+                    )
+
+        return url
+
+    def post_process(self, row: dict, context: Optional[dict] = None) -> Optional[dict]:
+        """Post process records."""
+        result = super().post_process(row, context)
+        del row
+        if result is None:
+            return None
+
+        assert context is not None  # Tell linter that context is non-null
+
+        for key, val in context.items():
+            if key in self.schema.get("properties", {}) and key not in result:
+                result[key] = val
+
+        return result
+
 
 class ProjectBasedStream(GitLabStream):
     """Base class for streams that are keys based on project ID."""
 
     state_partitioning_keys = ["project_path"]
-
-    @property
-    def partitions(self) -> List[dict]:
-        """Return a list of partition key dicts (if applicable), otherwise None."""
-        if "{project_path}" in self.path:
-            if "projects" not in self.config:
-                raise ValueError(
-                    f"Missing `projects` setting which is required for the "
-                    f"'{self.name}' stream."
-                )
-
-            return [
-                {"project_path": id}
-                for id in cast(list, self.config["projects"].split(" "))
-            ]
-
-        raise ValueError(
-            "Could not detect partition type for Gitlab stream "
-            f"'{self.name}' ({self.path}). "
-            "Expected a URL path containing '{project_path}' or '{group_path}'. "
-        )
 
 
 class GroupBasedStream(GitLabStream):

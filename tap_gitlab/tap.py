@@ -31,7 +31,11 @@ class TapGitLab(Tap):
             "api_url",
             th.StringType,
             required=False,
-            description="Optionally overrides the default base URL for the Gitlab API.",
+            description=(
+                "Optionally overrides the default base URL for the Gitlab API. "
+                "If no path is provided, the base URL will be appended with `/api/v4`. "
+                "E.g. 'https://gitlab.com' becomes 'https://gitlab.com/api/v4'."
+            ),
         ),
         th.Property(
             "private_token",
@@ -74,6 +78,7 @@ class TapGitLab(Tap):
                 "If not set to 'true', the following streams will be ignored: "
                 "'epics' and 'epic_issues'."
             ),
+            default=False,
         ),
         th.Property(
             "fetch_merge_request_commits",
@@ -143,10 +148,10 @@ class TapGitLab(Tap):
         If any streams are disabled in settings, they will not be exposed here during
         discovery.
         """
-        setup_requests_cache(dict(self.config))
+        setup_requests_cache(dict(self.config), self.logger)
 
         stream_types: List[type] = []
-        for class_name, module_class in inspect.getmembers(streams, inspect.isclass):
+        for _, module_class in inspect.getmembers(streams, inspect.isclass):
             if not issubclass(module_class, (GitLabStream)):
                 continue  # Not a stream class.
 
@@ -155,7 +160,7 @@ class TapGitLab(Tap):
 
             stream_name = module_class.name
 
-            if stream_name in OPTIN_STREAM_NAMES and not self.config.get(
+            if stream_name in OPTIN_STREAM_NAMES and self.config.get(
                 f"fetch_{stream_name}", False
             ):
                 continue  # This is an "optin" class, and is not opted in.
