@@ -78,8 +78,7 @@ class ProjectsStream(ProjectBasedStream):
     def get_url_params(
         self, context: Optional[dict], next_page_token: Optional[Any]
     ) -> Dict[str, Any]:
-        """Return a dictionary of values to be used in URL parameterization.
-        """
+        """Return a dictionary of values to be used in URL parameterization."""
         params = super().get_url_params(context, next_page_token)
         # include license info for the project
         params["license"] = True
