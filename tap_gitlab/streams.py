@@ -79,12 +79,10 @@ class ProjectsStream(ProjectBasedStream):
         self, context: Optional[dict], next_page_token: Optional[Any]
     ) -> Dict[str, Any]:
         """Return a dictionary of values to be used in URL parameterization.
-
-        Projects endpoint can include license info if explicitly requested.
         """
         params = super().get_url_params(context, next_page_token)
-        if self.config.get("include_license_info_for_projects", False):
-            params["license"] = True
+        # include license info for the project
+        params["license"] = True
         return params
 
     schema = th.PropertiesList(  # type: ignore

@@ -66,15 +66,6 @@ class TapGitLab(Tap):
             ),
         ),
         th.Property(
-            "include_license_info_for_projects",
-            th.BooleanType,
-            required=False,
-            description=(
-                "Optional. If true, projects will include license information"
-                "(defaults to false)"
-            ),
-        ),
-        th.Property(
             "start_date",
             th.DateTimeType,
             required=False,
