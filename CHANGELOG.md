@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.0.0
+
+- This release is a full rewrite on the Meltano [SDK](https://sdk.meltano.com) for Singer Taps.
+- License changed to Apache 2.0.
+
 ## 0.9.15
 
   * [#39](https://gitlab.com/meltano/tap-gitlab/-/issues/39) Add support for self-signed SSL certificate on self-hosted GitLab instance by allowing a certificate bundle to be configured using the `REQUESTS_CA_BUNDLE` env var.
