@@ -1,2 +1,0 @@
-include LICENSE
-include tap_gitlab/schemas/*.json
