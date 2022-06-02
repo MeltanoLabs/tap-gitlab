@@ -167,7 +167,6 @@ class LanguagesStream(ProjectBasedStream):
         iterator of [{language_name: "Python", percent: 23.45}].
         """
         languages_json = response.json()
-        self.logger.warning(languages_json)
         for key, value in languages_json.items():
             yield {"language_name": key, "percent": value}
 
