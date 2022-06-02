@@ -150,6 +150,27 @@ class ProjectsStream(ProjectBasedStream):
     ).to_dict()
 
 
+class ReadeMeStream(ProjectBasedStream):
+    """Gitlab README stream for a project."""
+
+    name = "readme"
+    # this hardcoded URL resolves to the README in HEAD, which should
+    # match the file in the main/master branch in the repo
+    path = "/projects/{project_id}/repository/files/README%2Emd/raw"
+    primary_keys = ["project_id"]
+    parent_stream_type = ProjectsStream
+    schema_filepath = None
+
+    def parse_response(self, response: requests.Response) -> Iterable[dict]:
+        """Return a record from the raw file in the response."""
+        yield {"content": response.text}
+
+    schema = th.PropertiesList(  # type: ignore
+        th.Property("project_id", th.IntegerType),
+        th.Property("content", th.StringType),
+    ).to_dict()
+
+
 class LanguagesStream(ProjectBasedStream):
     """Gitlab Languages stream for a project."""
 
