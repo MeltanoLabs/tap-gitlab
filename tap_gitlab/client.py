@@ -198,7 +198,7 @@ class GroupBasedStream(GitLabStream):
     @property
     def partitions(self) -> List[dict]:
         """Return a list of partition key dicts (if applicable), otherwise None."""
-        if "{group_path}" in self.path:
+        if "{group_id}" in self.path:
             if "groups" not in self.config:
                 raise ValueError(
                     f"Missing `groups` setting which is required for the "
@@ -206,8 +206,7 @@ class GroupBasedStream(GitLabStream):
                 )
 
             return [
-                {"group_path": id}
-                for id in cast(list, self.config["groups"].split(" "))
+                {"group_id": id} for id in cast(list, self.config["groups"].split(" "))
             ]
 
         raise ValueError(

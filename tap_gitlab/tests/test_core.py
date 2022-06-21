@@ -18,7 +18,7 @@ SAMPLE_CONFIG: Dict[str, Any] = {
     "start_date": "2022-03-01T00:00:00Z",
     "private_token": os.getenv("TAP_GITLAB_PRIVATE_TOKEN"),
     "projects": os.getenv("TAP_GITLAB_PROJECTS", "meltano/demo-project"),
-    "groups": os.getenv("TAP_GITLAB_GROUPS", "meltano/infra"),
+    "groups": os.getenv("TAP_GITLAB_GROUPS", "meltano"),
 }
 
 assert (

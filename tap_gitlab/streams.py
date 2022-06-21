@@ -41,10 +41,10 @@ class ProjectsStream(ProjectBasedStream):
     state_partitioning_keys = ["id"]
 
     def get_repo_ids(self, repo_list: List[str]) -> List[Dict[str, str]]:
-        """Enrich the list of repos with their numeric ID from github.
+        """Enrich the list of repos with their numeric ID from gitlab.
 
         This helps maintain a stable id for context and bookmarks.
-        It uses the gitlas api to fetch the numeric id matching the path.
+        It uses the gitlab api to fetch the numeric id matching the path.
         It also removes non-existant repos and corrects casing to ensure
         data is correct downstream.
         """
@@ -81,7 +81,7 @@ class ProjectsStream(ProjectBasedStream):
                     # one of the repos returned `None`, which means it does
                     # not exist, log some details, and move on to the next one
                     repo_full_name = repo_list[int(item[4:])]
-                    self.logger.info(
+                    self.logger.warning(
                         (
                             f"Repository not found: {repo_full_name} \t"
                             "Removing it from list"
@@ -690,6 +690,73 @@ class GroupsStream(GroupBasedStream):
     name = "groups"
     path = "/groups/{group_id}"
     primary_keys = ["id"]
+
+    def get_group_ids(self, group_list: List[str]) -> List[Dict[str, str]]:
+        """Enrich the list of groups with their numeric ID from gitlab.
+
+        This helps maintain a stable id for context and bookmarks.
+        It uses the gitlab api to fetch the numeric id matching the path.
+        It also removes non-existant repos and corrects casing to ensure
+        data is correct downstream.
+        """
+        # use a temp handmade stream to reuse all the graphql setup of the tap
+        class TempStream(GitlabGraphQLStream):
+            name = "tempStream"
+            schema_filepath = None  # to allow the use of schema below
+            schema = th.PropertiesList(
+                th.Property("id", th.StringType),
+            ).to_dict()
+
+            def __init__(self, tap, group_list) -> None:
+                super().__init__(tap)
+                self.group_list = group_list
+
+            @property
+            def query(self) -> str:
+                chunks = list()
+                for i, group in enumerate(self.group_list):
+                    chunks.append(
+                        f'grp{i}: group(fullPath: "{group}") ' "{ fullPath id }"
+                    )
+                return "query {" + " ".join(chunks) + "}"
+
+        groups_with_ids: list = list()
+        temp_stream = TempStream(self._tap, list(group_list))
+        # replace manually provided org/repo values by the ones obtained
+        # from gitlab api. This guarantees that case is correct in the output data.
+        # Also remove repos which do not exist to avoid crashing further down
+        # the line.
+        for record in temp_stream.request_records({}):
+            for item in record.keys():
+                if record[item] is None:
+                    # one of the repos returned `None`, which means it does
+                    # not exist, log some details, and move on to the next one
+                    group_full_name = group_list[int(item[3:])]
+                    self.logger.warning(
+                        (
+                            f"Group not found: {group_full_name} \t"
+                            "Removing it from list"
+                        )
+                    )
+                    continue
+                # group_id returned by graphql look like "gid://gitlab/Group/123456"
+                group_id = record[item]["id"].split("/")[-1]
+                groups_with_ids.append(
+                    {"group_path": record[item]["fullPath"], "group_id": group_id}
+                )
+        self.logger.info(f"Running the tap on {len(groups_with_ids)} repositories")
+        return groups_with_ids
+
+    @property
+    def partitions(self) -> List[dict[str, str]]:
+        """Return a list of partition key dicts (if applicable), otherwise None."""
+        if "groups" not in self.config:
+            raise ValueError(
+                f"Missing `groups` setting which is required for the "
+                f"'{self.name}' stream."
+            )
+
+        return self.get_group_ids(self.config["groups"].split(" "))
 
     def get_child_context(self, record: dict, context: Optional[dict]) -> dict:
         """Perform post processing, including queuing up any child stream types."""
