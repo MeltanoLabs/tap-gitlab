@@ -9,6 +9,7 @@ from singer_sdk import typing as th  # JSON schema typing helpers
 from tap_gitlab import streams
 from tap_gitlab.caching import setup_requests_cache
 from tap_gitlab.client import (
+    GitlabGraphQLStream,
     GitLabStream,
     GroupBasedStream,
     NoSinceProjectBasedStream,
@@ -161,6 +162,7 @@ class TapGitLab(Tap):
 
             if module_class in [
                 GitLabStream,
+                GitlabGraphQLStream,
                 ProjectBasedStream,
                 GroupBasedStream,
                 NoSinceProjectBasedStream,

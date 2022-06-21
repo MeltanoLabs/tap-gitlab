@@ -6,18 +6,20 @@ import copy
 import urllib
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union, cast
+from typing import Any, Dict, Iterable, List, Optional, Union, cast
 from urllib.parse import parse_qs, urlparse
 
 import requests
 from dateutil.parser import parse
 from singer_sdk.authenticators import APIKeyAuthenticator
-from singer_sdk.streams import RESTStream
+from singer_sdk.helpers.jsonpath import extract_jsonpath
+from singer_sdk.streams import GraphQLStream, RESTStream
 
 API_TOKEN_KEY = "Private-Token"
 API_TOKEN_SETTING_NAME = "private_token"
 
-DEFAULT_API_URL = "https://gitlab.com/api/v4"
+DEFAULT_REST_API_URL = "https://gitlab.com/api/v4"
+DEFAULT_GRAPHQL_API_URL = "https://gitlab.com/api"
 
 SCHEMAS_DIR = Path(__file__).parent / Path("./schemas")
 
@@ -44,7 +46,7 @@ class GitLabStream(RESTStream):
         'https://gitlab.com/api/v4' is equivalent to 'https://gitlab.com/api/v4/'.
         """
         # Remove trailing '/' from url base.
-        result = self.config.get("api_url", DEFAULT_API_URL).rstrip("/")
+        result = self.config.get("api_url", DEFAULT_REST_API_URL).rstrip("/")
 
         # If path part is not provided, append the v4 endpoint as default:
         # For example 'https://gitlab.com' => 'https://gitlab.com/api/v4'
@@ -213,3 +215,30 @@ class GroupBasedStream(GitLabStream):
             f"'{self.name}' ({self.path}). "
             "Expected a URL path containing '{project_path}' or '{group_id}'. "
         )
+
+
+class GitlabGraphQLStream(GraphQLStream, GitLabStream):
+    """Base class for graphql streams."""
+
+    @property
+    def url_base(self) -> str:
+        base_url = self.config.get("graphql_api_url_base", DEFAULT_GRAPHQL_API_URL)
+        return f"{base_url}/graphql"
+
+    # the jsonpath under which to fetch the list of records from the graphql response
+    records_jsonpath: str = "$.data.[*]"  # type: ignore
+
+    def parse_response(self, response: requests.Response) -> Iterable[dict]:
+        """Parse the response and return an iterator of result rows.
+
+        Args:
+            response: A raw `requests.Response`_ object.
+
+        Yields:
+            One item for every item found in the response.
+
+        .. _requests.Response:
+            https://docs.python-requests.org/en/latest/api/#requests.Response
+        """
+        resp_json = response.json()
+        yield from extract_jsonpath(self.records_jsonpath, input=resp_json)
