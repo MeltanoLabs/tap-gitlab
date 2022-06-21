@@ -1,11 +1,12 @@
 """Stream type classes for tap-gitlab."""
 
-from typing import Any, Dict, Iterable, List, Optional, cast
+from typing import Any, Dict, Iterable, List, Optional
 
 import requests
 from singer_sdk import typing as th  # JSON Schema typing helpers
 
 from tap_gitlab.client import (
+    GitlabGraphQLStream,
     GitLabStream,
     GroupBasedStream,
     NoSinceProjectBasedStream,
@@ -31,7 +32,7 @@ class ProjectsStream(ProjectBasedStream):
     """Gitlab Projects stream."""
 
     name = "projects"
-    path = "/projects/{project_path}"
+    path = "/projects/{project_id}"
     primary_keys = ["id"]
     replication_key = "last_activity_at"
     is_sorted = False
@@ -39,8 +40,64 @@ class ProjectsStream(ProjectBasedStream):
     schema_filepath = None  # to allow the use of schema below
     state_partitioning_keys = ["id"]
 
+    def get_repo_ids(self, repo_list: List[str]) -> List[Dict[str, str]]:
+        """Enrich the list of repos with their numeric ID from github.
+
+        This helps maintain a stable id for context and bookmarks.
+        It uses the gitlas api to fetch the numeric id matching the path.
+        It also removes non-existant repos and corrects casing to ensure
+        data is correct downstream.
+        """
+        # use a temp handmade stream to reuse all the graphql setup of the tap
+        class TempStream(GitlabGraphQLStream):
+            name = "tempStream"
+            schema_filepath = None  # to allow the use of schema below
+            schema = th.PropertiesList(
+                th.Property("id", th.StringType),
+            ).to_dict()
+
+            def __init__(self, tap, repo_list) -> None:
+                super().__init__(tap)
+                self.repo_list = repo_list
+
+            @property
+            def query(self) -> str:
+                chunks = list()
+                for i, repo in enumerate(self.repo_list):
+                    chunks.append(
+                        f'repo{i}: project(fullPath: "{repo}") ' "{ fullPath id }"
+                    )
+                return "query {" + " ".join(chunks) + "}"
+
+        repos_with_ids: list = list()
+        temp_stream = TempStream(self._tap, list(repo_list))
+        # replace manually provided org/repo values by the ones obtained
+        # from gitlab api. This guarantees that case is correct in the output data.
+        # Also remove repos which do not exist to avoid crashing further down
+        # the line.
+        for record in temp_stream.request_records({}):
+            for item in record.keys():
+                if record[item] is None:
+                    # one of the repos returned `None`, which means it does
+                    # not exist, log some details, and move on to the next one
+                    repo_full_name = repo_list[int(item[4:])]
+                    self.logger.info(
+                        (
+                            f"Repository not found: {repo_full_name} \t"
+                            "Removing it from list"
+                        )
+                    )
+                    continue
+                # project_id returned by graphql look like "gid://gitlab/Project/123456"
+                project_id = record[item]["id"].split("/")[-1]
+                repos_with_ids.append(
+                    {"project_path": record[item]["fullPath"], "project_id": project_id}
+                )
+        self.logger.info(f"Running the tap on {len(repos_with_ids)} repositories")
+        return repos_with_ids
+
     @property
-    def partitions(self) -> List[dict]:
+    def partitions(self) -> List[dict[str, str]]:
         """Return a list of partition key dicts (if applicable), otherwise None."""
         if "{project_path}" in self.path:
             if "projects" not in self.config:
@@ -49,10 +106,7 @@ class ProjectsStream(ProjectBasedStream):
                     f"'{self.name}' stream."
                 )
 
-        return [
-            {"project_path": id}
-            for id in cast(list, self.config["projects"].split(" "))
-        ]
+        return self.get_repo_ids(self.config["projects"].split(" "))
 
     def post_process(self, row: dict, context: Optional[dict] = None) -> Optional[dict]:
         """Post process records."""
@@ -634,14 +688,13 @@ class GroupsStream(GroupBasedStream):
     """Gitlab Groups stream."""
 
     name = "groups"
-    path = "/groups/{group_path}"
+    path = "/groups/{group_id}"
     primary_keys = ["id"]
 
     def get_child_context(self, record: dict, context: Optional[dict]) -> dict:
         """Perform post processing, including queuing up any child stream types."""
         assert context is not None  # Tell linter that context is non-null
         return {
-            "group_path": context["group_path"],
             "group_id": record["id"],
         }
 
@@ -650,7 +703,7 @@ class GroupProjectsStream(GroupBasedStream):
     """Gitlab Projects stream."""
 
     name = "group_projects"
-    path = "/groups/{group_path}/projects"
+    path = "/groups/{group_id}/projects"
     primary_keys = ["id"]
     parent_stream_type = GroupsStream
 
@@ -659,7 +712,7 @@ class GroupMilestonesStream(GroupBasedStream):
     """Gitlab Group Milestones stream."""
 
     name = "group_milestones"
-    path = "/groups/{group_path}/milestones"
+    path = "/groups/{group_id}/milestones"
     primary_keys = ["id"]
     schema_filename = "milestones.json"
     parent_stream_type = GroupsStream
@@ -669,7 +722,7 @@ class GroupMembersStream(GroupBasedStream):
     """Gitlab Group Members stream."""
 
     name = "group_members"
-    path = "/groups/{group_path}/members"
+    path = "/groups/{group_id}/members"
     primary_keys = ["group_id", "id"]
     parent_stream_type = GroupsStream
 
@@ -678,7 +731,7 @@ class GroupLabelsStream(GroupBasedStream):
     """Gitlab Group Labels stream."""
 
     name = "group_labels"
-    path = "/groups/{group_path}/labels"
+    path = "/groups/{group_id}/labels"
     primary_keys = ["group_id", "id"]
     parent_stream_type = GroupsStream
 
@@ -687,7 +740,7 @@ class GroupEpicsStream(GroupBasedStream):
     """Gitlab Epics stream."""
 
     name = "epics"
-    path = "/groups/{group_path}/epics"
+    path = "/groups/{group_id}/epics"
     primary_keys = ["id"]
     replication_key = "updated_at"
     bookmark_param_name = "updated_after"

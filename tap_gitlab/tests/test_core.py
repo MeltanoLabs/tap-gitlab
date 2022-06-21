@@ -6,6 +6,7 @@ from typing import Any, Dict
 from dotenv import load_dotenv
 from singer_sdk.testing import get_standard_tap_tests
 
+from tap_gitlab.streams import ProjectsStream
 from tap_gitlab.tap import OPTIN_STREAM_NAMES, TapGitLab
 
 load_dotenv()  # Import any environment variables from local `.env` file.
@@ -73,3 +74,34 @@ def test_state_partitioning_keys_in_schema():
                 f"Coding error in stream {name}: state_partitioning_key "
                 f"{pkey} is missing in schema"
             )
+
+
+def test_path_variables_in_context():
+    """Verify that the variables to be used in path are provided by context."""
+    tap = TapGitLab(config=SAMPLE_CONFIG, parse_env_config=True)
+    for name, stream in tap.streams.items():
+        pkeys = stream.state_partitioning_keys or []
+        schema_props = set(stream.schema["properties"].keys())
+        for pkey in pkeys:
+            assert pkey in schema_props, (
+                f"Coding error in stream {name}: state_partitioning_key "
+                f"{pkey} is missing in schema"
+            )
+
+
+def test_get_repo_ids():
+    """Check that the "presync" graphql call returns clean repo names/ids."""
+    tap = TapGitLab(config=SAMPLE_CONFIG, parse_env_config=True)
+    stream = ProjectsStream(tap=tap)
+
+    list_of_buggy_repos = [
+        "meLTano/sDk",  # incorrect case
+        "DoesNot/Exist",  # does not exist ;)
+        "gitlab-org/graphql-sandbox",  # correct value
+    ]
+    clean_list = stream.get_repo_ids(list_of_buggy_repos)
+
+    assert clean_list == [
+        {"project_id": "22672923", "project_path": "meltano/sdk"},
+        {"project_id": "15297693", "project_path": "gitlab-org/graphql-sandbox"},
+    ]
