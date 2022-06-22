@@ -118,8 +118,8 @@ class GitLabStream(RESTStream):
             if search_text in url:
                 url = url.replace(search_text, self._url_encode(val))
                 if "{project_path}" in search_text:
-                    self.logger.info(
-                        f"DEBUG: Found project arg. URL is {url} after parsing "
+                    self.logger.debug(
+                        f"Found project arg. URL is {url} after parsing "
                         f"input val '{val}' to '{self._url_encode(val)}'."
                     )
 
