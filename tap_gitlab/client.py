@@ -221,6 +221,7 @@ class GitlabGraphQLStream(GraphQLStream, GitLabStream):
 
     @property
     def url_base(self) -> str:
+        """Return the base url for graphql streams."""
         base_url = self.config.get("graphql_api_url_base", DEFAULT_GRAPHQL_API_URL)
         return f"{base_url}/graphql"
 
@@ -229,12 +230,6 @@ class GitlabGraphQLStream(GraphQLStream, GitLabStream):
 
     def parse_response(self, response: requests.Response) -> Iterable[dict]:
         """Parse the response and return an iterator of result rows.
-
-        Args:
-            response: A raw `requests.Response`_ object.
-
-        Yields:
-            One item for every item found in the response.
 
         .. _requests.Response:
             https://docs.python-requests.org/en/latest/api/#requests.Response
