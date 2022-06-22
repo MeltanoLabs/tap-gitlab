@@ -748,7 +748,7 @@ class GroupsStream(GroupBasedStream):
         return groups_with_ids
 
     @property
-    def partitions(self) -> List[dict[str, str]]:
+    def partitions(self) -> List[Dict[str, str]]:
         """Return a list of partition key dicts (if applicable), otherwise None."""
         if "groups" not in self.config:
             raise ValueError(
