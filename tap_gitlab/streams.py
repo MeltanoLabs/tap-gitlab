@@ -97,7 +97,7 @@ class ProjectsStream(ProjectBasedStream):
         return repos_with_ids
 
     @property
-    def partitions(self) -> List[dict[str, str]]:
+    def partitions(self) -> List[Dict[str, str]]:
         """Return a list of partition key dicts (if applicable), otherwise None."""
         if "{project_path}" in self.path:
             if "projects" not in self.config:
