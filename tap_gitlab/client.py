@@ -6,7 +6,7 @@ import copy
 import urllib
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union, cast
+from typing import Any, Dict, Iterable, List, Optional, Union, cast
 from urllib.parse import urlparse
 
 import requests
@@ -19,6 +19,16 @@ API_TOKEN_SETTING_NAME = "private_token"
 DEFAULT_API_URL = "https://gitlab.com/api/v4"
 
 SCHEMAS_DIR = Path(__file__).parent / Path("./schemas")
+
+
+def _truthy(val: Any) -> bool:
+    """Convert strings from env vars and settings to booleans."""
+    if isinstance(val, str):
+        if val.lower() in ["false", "0"]:
+            return False
+
+    # Convert val to bool
+    return not not val  # pylint: disable=C0113
 
 
 class GitLabStream(RESTStream):
@@ -84,7 +94,6 @@ class GitLabStream(RESTStream):
     ) -> Dict[str, Any]:
         """Return a dictionary of values to be used in URL parameterization."""
         # If the class has extra default params, start with those:
-        # TODO: SDK Bug: without copy(), this will leak params across classes/objects.
         params: dict = copy.copy(self.extra_url_params or {})
 
         if next_page_token:
@@ -139,6 +148,57 @@ class GitLabStream(RESTStream):
                 result[key] = val
 
         return result
+
+    def validate_response(self, response: requests.Response) -> None:
+        """Validate HTTP response.
+
+        Overrides the base class in order to ignore 401 access denied errors if the
+        config value 'ignore_access_denied' is True.
+
+        Args:
+            response: A `requests.Response`_ object.
+
+        Raises:
+            FatalAPIError: If the request is not retriable.
+            RetriableAPIError: If the request is retriable.
+
+        .. _requests.Response:
+            https://docs.python-requests.org/en/latest/api/#requests.Response
+        """
+        if (
+            _truthy(self.config.get("ignore_access_denied", False))
+            and response.status_code == 401
+        ):
+            self.logger.info(
+                "Ignoring 401 access denied error "
+                "('ignore_access_denied' setting is True)."
+            )
+            return
+
+        super().validate_response(response)
+
+    def parse_response(self, response: requests.Response) -> Iterable[dict]:
+        """Parse the response and return an iterator of result rows.
+
+        We override this method in order to skip over any 'access_denied' (401) errors
+        and avoid parsing those responses as records.
+
+        Args:
+            response: A raw `requests.Response`_ object.
+
+        Yields:
+            One item for every item found in the response.
+
+        .. _requests.Response:
+            https://docs.python-requests.org/en/latest/api/#requests.Response
+        """
+        if (
+            _truthy(self.config.get("ignore_access_denied", False))
+            and response.status_code == 401
+        ):
+            yield from ()
+
+        yield from super().parse_response(response)
 
 
 class ProjectBasedStream(GitLabStream):
