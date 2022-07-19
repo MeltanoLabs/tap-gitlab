@@ -643,7 +643,7 @@ class ProjectLabelsStream(ProjectBasedStream):
     primary_keys = ["project_id", "id"]
     parent_stream_type = ProjectsStream
     schema_filepath = None
-    state_partitioning_keys = ["project_path"]
+    state_partitioning_keys = ["project_id"]
     extra_url_params = {"per_page": 100}
 
     schema = th.PropertiesList(  # type: ignore
