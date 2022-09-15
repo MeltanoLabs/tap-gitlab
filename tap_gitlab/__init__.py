@@ -24,6 +24,7 @@ CONFIG = {
     'ultimate_license': False,
     'fetch_merge_request_commits': False,
     'fetch_pipelines_extended': False,
+    'fetch_retried_jobs': False,
     'fetch_group_variables': False,
     'fetch_project_variables': False,
 }
@@ -71,7 +72,7 @@ RESOURCES = {
         'replication_keys': ['updated_at'],
     },
     'jobs': {
-        'url': '/projects/{id}/pipelines/{secondary_id}/jobs',
+        'url': '/projects/{id}/pipelines/{secondary_id}/jobs?include_retried={fetch_retried_jobs}',
         'schema': load_schema('jobs'),
         'key_properties': ['id'],
         'replication_method': 'FULL_TABLE',
@@ -766,8 +767,9 @@ def sync_jobs(project, pipeline):
     if stream is None or not stream.is_selected():
         return
     mdata = metadata.to_map(stream.metadata)
+    fetch_retried_jobs = CONFIG['fetch_retried_jobs']
 
-    url = get_url(entity=entity, id=project['id'], secondary_id=pipeline['id'])
+    url = get_url(entity=entity, id=project['id'], secondary_id=pipeline['id'], fetch_retried_jobs=fetch_retried_jobs)
     with Transformer(pre_hook=format_timestamp) as transformer:
         for row in gen_request(url):
             row['project_id'] = project['id']
@@ -928,6 +930,7 @@ def main_impl():
     CONFIG['ultimate_license'] = truthy(CONFIG['ultimate_license'])
     CONFIG['fetch_merge_request_commits'] = truthy(CONFIG['fetch_merge_request_commits'])
     CONFIG['fetch_pipelines_extended'] = truthy(CONFIG['fetch_pipelines_extended'])
+    CONFIG['fetch_retried_jobs'] = truthy(CONFIG['fetch_retried_jobs'])
     CONFIG['fetch_group_variables'] = truthy(CONFIG['fetch_group_variables'])
     CONFIG['fetch_project_variables'] = truthy(CONFIG['fetch_project_variables'])
 

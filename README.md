@@ -79,6 +79,7 @@ pip install git+https://gitlab.com/meltano/tap-gitlab.git
       "ultimate_license": true,
       "fetch_merge_request_commits": false,
       "fetch_pipelines_extended": false,
+      "fetch_retried_jobs": false,
       "fetch_group_variables": false,
       "fetch_project_variables": false
     }
@@ -91,6 +92,8 @@ pip install git+https://gitlab.com/meltano/tap-gitlab.git
     If `fetch_merge_request_commits` is true (defaults to false), then for each Merge Request, also fetch the MR's commits and create the join table `merge_request_commits` with the Merge Request and related Commit IDs. In the current version of GitLab's API, this operation requires one API call per Merge Request, so setting this to True can slow down considerably the end-to-end extraction time. For example, in a project like `gitlab-org/gitlab-foss`, this would result to 15x more API calls than required for fetching all the other Entities supported by `tap-gitlab`.
 
     If `fetch_pipelines_extended` is true (defaults to false), then for every Pipeline fetched with `sync_pipelines` (which returns N pages containing all pipelines per project), also fetch extended details of each of these pipelines with `sync_pipelines_extended`. Similar concerns as those related to `fetch_merge_request_commits` apply here - every pipeline fetched with `sync_pipelines_extended` requires a separate API call.
+
+    If `fetch_retried_jobs` is true (defaults to false), then include retried jobs as well.
 
     If `fetch_group_variables` is true (defaults to false), then Group-level CI/CD variables will be retrieved for each available / specified group. This feature is treated as an opt-in to prevent users from accidentally extracting any potential secrets stored as Group-level CI/CD variables.
 
