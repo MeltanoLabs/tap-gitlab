@@ -230,7 +230,7 @@ class ResourceInaccessible(Exception):
 def truthy(val) -> bool:
     return str(val).lower() in TRUTHY
 
-def get_url(entity, id, secondary_id=None, start_date=None, fetch_retried_issues=False):
+def get_url(entity, id, secondary_id=None, start_date=None, fetch_retried_jobs=False):
     if not isinstance(id, int):
         id = id.replace("/", "%2F")
 
@@ -241,7 +241,7 @@ def get_url(entity, id, secondary_id=None, start_date=None, fetch_retried_issues
             id=id,
             secondary_id=secondary_id,
             start_date=start_date,
-            fetch_retried_issues=fetch_retried_issues,
+            fetch_retried_jobs=fetch_retried_jobs,
         )
 
 
