@@ -201,6 +201,7 @@ class TapGitLab(Tap):
         Issue a warning about breaking changes in state management.
         """
         self.logger.warning(
-            "If your state file was created by tap-gitlab <= 1.2.0, it will be ignored. See changelog for details."
+            "If your state file was created by tap-gitlab <= 1.2.0, it will be ignored."
+            "See changelog for details."
         )
         super().load_state(state)
