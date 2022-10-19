@@ -1,7 +1,7 @@
 """GitLab tap class."""
 
 import inspect
-from typing import List
+from typing import Any, Dict, List
 
 from singer_sdk import Stream, Tap
 from singer_sdk import typing as th  # JSON schema typing helpers
@@ -195,3 +195,12 @@ class TapGitLab(Tap):
             stream_types.append(module_class)
 
         return [stream_class(tap=self) for stream_class in stream_types]
+
+    def load_state(self, state: Dict[str, Any]) -> None:
+        """
+        Issue a warning about breaking changes in state management.
+        """
+        self.logger.warning(
+            "If your state file was created by tap-gitlab <= 1.2.0, it will be ignored. See changelog for details."
+        )
+        super().load_state(state)

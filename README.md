@@ -9,6 +9,7 @@ Built with the [Meltano SDK](https://sdk.meltano.com) for Singer Taps and Target
 - This repository's default branch (`legacy-stable`) is kept for compatibility reasons but is no longer under active development.
 - New development is being performed against the `main` branch, which is based on a port to the Meltano SDK in Pull Request #65.
 - For a stable experience, users of this tap should begin pinning their installations to a specific [release](https://github.com/MeltanoLabs/tap-gitlab/releases) instead of branch references. More instructions are provided within the `README.md` of the `main` branch.
+- Release 1.2.0 introduces **breaking changes** in the state management of the tap: streams now use numeric ids to track projects and groups to better handle changes in names. If you have bookmarks from a previous version, they will become invalid, meaning the tap will restart streams "from the beginning" the first time you run on this release.
 
 ## Capabilities
 
