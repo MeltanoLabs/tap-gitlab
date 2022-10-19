@@ -3,7 +3,12 @@
 
 name: Test tap-gitlab
 
-on: [push]
+on:
+  # Run on all pull requests and on pushes to master.
+  pull_request:
+  push:
+    branches:
+      - main
 
 jobs:
   linting:
@@ -15,15 +20,15 @@ jobs:
         python-version: [3.9]
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install Poetry
       uses: snok/install-poetry@v1
       with:
-        version: 1.1.13
+        version: 1.2.2
     - name: Install dependencies
       run: |
         poetry install
@@ -40,18 +45,18 @@ jobs:
       TAP_GITLAB_PROJECTS: meltano/demo-project
     strategy:
       matrix:
-        python-version: [3.7, 3.8, 3.9]
+        python-version: [3.7, 3.8, 3.9, "3.10"]
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install Poetry
       uses: snok/install-poetry@v1
       with:
-        version: 1.1.11
+        version: 1.2.2
     - name: Install dependencies
       run: |
         poetry install

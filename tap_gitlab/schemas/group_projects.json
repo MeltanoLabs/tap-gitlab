@@ -33,6 +33,9 @@
         "http_url_to_repo": {
             "type": ["null", "string"]
         },
+        "group_id": {
+            "type": ["null", "integer"]
+        },
         "id": {
             "type": ["null", "integer"]
         },

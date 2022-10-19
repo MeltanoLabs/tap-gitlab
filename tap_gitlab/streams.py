@@ -1,25 +1,103 @@
 """Stream type classes for tap-gitlab."""
 
-from typing import Any, Dict, List, Optional, cast
+from typing import Any, Dict, Iterable, List, Optional
 
-from tap_gitlab.client import GitLabStream, GroupBasedStream, ProjectBasedStream
-from tap_gitlab.transforms import object_array_to_id_array, pop_nested_id
+import requests
+from singer_sdk import typing as th  # JSON Schema typing helpers
+
+from tap_gitlab.client import (
+    GitlabGraphQLStream,
+    GitLabStream,
+    GroupBasedStream,
+    NoSinceProjectBasedStream,
+    ProjectBasedStream,
+)
+from tap_gitlab.transforms import pop_nested_id
 
 # Project-Specific Streams
+
+# all user objects in non-user streams follow the same structure
+# keep it here to help readability in schema definitions below
+user_object = th.ObjectType(
+    th.Property("id", th.IntegerType),
+    th.Property("username", th.StringType),
+    th.Property("name", th.StringType),
+    th.Property("state", th.StringType),
+    th.Property("avatar_url", th.StringType),
+    th.Property("web_url", th.StringType),
+)
 
 
 class ProjectsStream(ProjectBasedStream):
     """Gitlab Projects stream."""
 
     name = "projects"
-    path = "/projects/{project_path}"
+    path = "/projects/{project_id}"
     primary_keys = ["id"]
     replication_key = "last_activity_at"
-    is_sorted = True
+    is_sorted = False
     extra_url_params = {"statistics": 1}
+    schema_filepath = None  # to allow the use of schema below
+    state_partitioning_keys = ["id"]
+
+    def get_repo_ids(self, repo_list: List[str]) -> List[Dict[str, str]]:
+        """Enrich the list of repos with their numeric ID from gitlab.
+
+        This helps maintain a stable id for context and bookmarks.
+        It uses the gitlab api to fetch the numeric id matching the path.
+        It also removes non-existant repos and corrects casing to ensure
+        data is correct downstream.
+        """
+        # use a temp handmade stream to reuse all the graphql setup of the tap
+        class TempStream(GitlabGraphQLStream):
+            name = "tempStream"
+            schema_filepath = None  # to allow the use of schema below
+            schema = th.PropertiesList(
+                th.Property("id", th.StringType),
+            ).to_dict()
+
+            def __init__(self, tap, repo_list) -> None:
+                super().__init__(tap)
+                self.repo_list = repo_list
+
+            @property
+            def query(self) -> str:
+                chunks = list()
+                for i, repo in enumerate(self.repo_list):
+                    chunks.append(
+                        f'repo{i}: project(fullPath: "{repo}") ' "{ fullPath id }"
+                    )
+                return "query {" + " ".join(chunks) + "}"
+
+        repos_with_ids: list = list()
+        temp_stream = TempStream(self._tap, list(repo_list))
+        # replace manually provided org/repo values by the ones obtained
+        # from gitlab api. This guarantees that case is correct in the output data.
+        # Also remove repos which do not exist to avoid crashing further down
+        # the line.
+        for record in temp_stream.request_records({}):
+            for item in record.keys():
+                if record[item] is None:
+                    # one of the repos returned `None`, which means it does
+                    # not exist, log some details, and move on to the next one
+                    repo_full_name = repo_list[int(item[4:])]
+                    self.logger.warning(
+                        (
+                            f"Repository not found: {repo_full_name} \t"
+                            "Removing it from list"
+                        )
+                    )
+                    continue
+                # project_id returned by graphql look like "gid://gitlab/Project/123456"
+                project_id = record[item]["id"].split("/")[-1]
+                repos_with_ids.append(
+                    {"project_path": record[item]["fullPath"], "project_id": project_id}
+                )
+        self.logger.info(f"Running the tap on {len(repos_with_ids)} repositories")
+        return repos_with_ids
 
     @property
-    def partitions(self) -> List[dict]:
+    def partitions(self) -> List[Dict[str, str]]:
         """Return a list of partition key dicts (if applicable), otherwise None."""
         if "{project_path}" in self.path:
             if "projects" not in self.config:
@@ -28,10 +106,7 @@ class ProjectsStream(ProjectBasedStream):
                     f"'{self.name}' stream."
                 )
 
-        return [
-            {"project_path": id}
-            for id in cast(list, self.config["projects"].split(" "))
-        ]
+        return self.get_repo_ids(self.config["projects"].split(" "))
 
     def post_process(self, row: dict, context: Optional[dict] = None) -> Optional[dict]:
         """Post process records."""
@@ -54,6 +129,128 @@ class ProjectsStream(ProjectBasedStream):
             "project_path": context["project_path"],
         }
 
+    def get_url_params(
+        self, context: Optional[dict], next_page_token: Optional[Any]
+    ) -> Dict[str, Any]:
+        """Return a dictionary of values to be used in URL parameterization."""
+        params = super().get_url_params(context, next_page_token)
+        # include license info for the project
+        params["license"] = True
+        return params
+
+    schema = th.PropertiesList(  # type: ignore
+        th.Property("id", th.IntegerType),
+        th.Property("description", th.StringType),
+        th.Property("name", th.StringType),
+        th.Property("name_with_namespace", th.StringType),
+        th.Property("path", th.StringType),
+        th.Property("path_with_namespace", th.StringType),
+        th.Property("created_at", th.DateTimeType),
+        th.Property("default_branch", th.StringType),
+        # tag_list deprecated in favour of topics
+        # https://docs.gitlab.com/ee/api/projects.html
+        th.Property("tag_list", th.ArrayType(th.StringType)),
+        th.Property("topics", th.ArrayType(th.StringType)),
+        th.Property("ssh_url_to_repo", th.StringType),
+        th.Property("http_url_to_repo", th.StringType),
+        th.Property("web_url", th.StringType),
+        th.Property("readme_url", th.StringType),
+        th.Property("avatar_url", th.StringType),
+        th.Property("forks_count", th.IntegerType),
+        th.Property("star_count", th.IntegerType),
+        th.Property("last_activity_at", th.DateTimeType),
+        # gitlab handles project owners differently depending on their types:
+        # "users" have both a namespace and owner object (note `id` values do not match)
+        # "groups" only have a namespace filled, and owner is empty. `namespace__id`
+        # can be passed to `/groups/:id` and return the expected group,
+        # but not to `/users/:id`.
+        th.Property(
+            "namespace",
+            th.ObjectType(
+                th.Property("id", th.IntegerType),
+                th.Property("name", th.StringType),
+                th.Property("path", th.StringType),
+                th.Property("kind", th.StringType),
+                th.Property("full_path", th.StringType),
+                th.Property("parent_id", th.IntegerType),
+            ),
+        ),
+        th.Property("owner", user_object),
+        th.Property("archived", th.BooleanType),
+        th.Property("visibility", th.StringType),
+        th.Property("visibility_level", th.IntegerType),
+        th.Property("open_issues_count", th.IntegerType),
+        th.Property("creator_id", th.IntegerType),
+        th.Property("public", th.BooleanType),
+        th.Property("public_builds", th.BooleanType),
+        th.Property("only_allow_merge_if_all_discussions_are_resolved", th.BooleanType),
+        th.Property("only_allow_merge_if_build_succeeds", th.BooleanType),
+        th.Property("request_access_enabled", th.BooleanType),
+        th.Property("issues_enabled", th.BooleanType),
+        th.Property("shared_runners_enabled", th.BooleanType),
+        th.Property("snippets_enabled", th.BooleanType),
+        th.Property("wiki_enabled", th.BooleanType),
+        th.Property("license_url", th.StringType),
+        th.Property(
+            "license",
+            th.ObjectType(
+                th.Property("key", th.StringType),
+                th.Property("name", th.StringType),
+                th.Property("nickname", th.StringType),
+                th.Property("html_url", th.StringType),
+                th.Property("source_url", th.StringType),
+            ),
+        ),
+    ).to_dict()
+
+
+class ReadeMeStream(ProjectBasedStream):
+    """Gitlab README stream for a project."""
+
+    name = "readme"
+    # this hardcoded URL resolves to the README in HEAD, which should
+    # match the file in the main/master branch in the repo
+    path = "/projects/{project_id}/repository/files/README%2Emd/raw"
+    primary_keys = ["project_id"]
+    parent_stream_type = ProjectsStream
+    schema_filepath = None
+
+    def parse_response(self, response: requests.Response) -> Iterable[dict]:
+        """Return a record from the raw file in the response."""
+        yield {"content": response.text}
+
+    schema = th.PropertiesList(  # type: ignore
+        th.Property("project_id", th.IntegerType),
+        th.Property("content", th.StringType),
+    ).to_dict()
+
+
+class LanguagesStream(ProjectBasedStream):
+    """Gitlab Languages stream for a project."""
+
+    # docs: https://docs.gitlab.com/ee/api/projects.html#languages
+    name = "languages"
+    path = "/projects/{project_id}/languages"
+    primary_keys = ["project_id", "language_name"]
+    parent_stream_type = ProjectsStream
+    schema_filepath = None  # to allow the use of schema below
+
+    def parse_response(self, response: requests.Response) -> Iterable[dict]:
+        """Return an iterator of {language_name, percent}.
+
+        Parse the language response and reformat to return as an
+        iterator of [{language_name: "Python", percent: 23.45}].
+        """
+        languages_json = response.json()
+        for key, value in languages_json.items():
+            yield {"language_name": key, "percent": value}
+
+    schema = th.PropertiesList(  # type: ignore
+        th.Property("project_id", th.IntegerType),
+        th.Property("language_name", th.StringType),
+        th.Property("percent", th.NumberType),
+    ).to_dict()
+
 
 class IssuesStream(ProjectBasedStream):
     """Gitlab Issues stream."""
@@ -67,6 +264,7 @@ class IssuesStream(ProjectBasedStream):
 
     bookmark_param_name = "updated_after"
     extra_url_params = {"scope": "all"}
+    schema_filepath = None  # to allow the use of schema below
 
     def post_process(self, row: dict, context: Optional[dict] = None) -> Optional[dict]:
         """Post process records."""
@@ -74,8 +272,87 @@ class IssuesStream(ProjectBasedStream):
         if result is None:
             return None
 
-        result["assignees"] = object_array_to_id_array(result["assignees"])
+        # XXX: breaks backwards compatibility
+        # result["assignees"] = object_array_to_id_array(result["assignees"])
         return result
+
+    def get_child_context(self, record: dict, context: Optional[dict]) -> dict:
+        """Return the context for child streams such as issue_notes."""
+        assert context is not None
+        context["issue_iid"] = record["iid"]
+        return context
+
+    schema = th.PropertiesList(  # type: ignore
+        th.Property("id", th.IntegerType),
+        th.Property("iid", th.IntegerType),
+        th.Property("project_id", th.IntegerType),
+        th.Property("milestone_id", th.IntegerType),
+        th.Property("epic_id", th.IntegerType),
+        th.Property("author", user_object),
+        th.Property("assignees", th.ArrayType(user_object)),
+        # XXX: breaks backwards compatibility
+        th.Property("closed_by", user_object),
+        th.Property("title", th.StringType),
+        th.Property("description", th.StringType),
+        th.Property("state", th.StringType),
+        th.Property("labels", th.ArrayType(th.StringType)),
+        th.Property("created_at", th.DateTimeType),
+        th.Property("updated_at", th.DateTimeType),
+        th.Property("closed_at", th.DateTimeType),
+        th.Property("subscribed", th.BooleanType),
+        th.Property("upvotes", th.IntegerType),
+        th.Property("downvotes", th.IntegerType),
+        th.Property("merge_requests_count", th.IntegerType),
+        th.Property("user_notes_count", th.IntegerType),
+        th.Property("due_date", th.StringType),
+        th.Property("weight", th.IntegerType),
+        th.Property("web_url", th.StringType),
+        th.Property("confidential", th.BooleanType),
+        th.Property("discussion_locked", th.BooleanType),
+        th.Property("has_tasks", th.BooleanType),
+        th.Property("task_status", th.StringType),
+        th.Property("time_estimate", th.IntegerType),
+        th.Property("total_time_spent", th.IntegerType),
+        th.Property("human_time_estimate", th.StringType),
+        th.Property("human_total_time_spent", th.StringType),
+    ).to_dict()
+
+
+class NoteableStream(NoSinceProjectBasedStream):
+    """Abstract class for gitlab's Noteable API stream."""
+
+    # docs: https://docs.gitlab.com/ee/api/notes.html#list-project-issue-notes
+
+    primary_keys = ["id"]
+    schema_filepath = None
+    # set this to project_id only to avoid saving a bookmark for each issue
+    # which would result in the state object becoming unusably large
+    state_partitioning_keys = ["project_id"]
+    extra_url_params = {"sort": "desc", "order_by": "updated_at"}
+    replication_key = "updated_at"
+    ignore_parent_replication_key = False
+
+    schema = th.PropertiesList(  # type: ignore
+        th.Property("id", th.IntegerType),
+        th.Property("project_id", th.IntegerType),
+        th.Property("noteable_id", th.IntegerType),
+        th.Property("noteable_iid", th.IntegerType),
+        th.Property("noteable_type", th.StringType),
+        th.Property("body", th.StringType),
+        th.Property("attachment", th.StringType),
+        th.Property("author", user_object),
+        th.Property("created_at", th.DateTimeType),
+        th.Property("updated_at", th.DateTimeType),
+        th.Property("confidential", th.BooleanType),
+    ).to_dict()
+
+
+class IssueNotesStream(NoteableStream):
+    """Gitlab Issues Notes (comments) Stream."""
+
+    name = "issue_notes"
+    parent_stream_type = IssuesStream
+    path = "/projects/{project_path}/issues/{issue_iid}/notes"
 
 
 class ProjectMergeRequestsStream(ProjectBasedStream):
@@ -89,17 +366,13 @@ class ProjectMergeRequestsStream(ProjectBasedStream):
 
     bookmark_param_name = "updated_after"
     extra_url_params = {"scope": "all"}
+    schema_filepath = None  # to allow the use of schema below
 
     def post_process(self, row: dict, context: Optional[dict] = None) -> Optional[dict]:
         """Post process records."""
         result = super().post_process(row, context)
         if result is None:
             return None
-
-        for key in ["author", "assignee", "milestone", "merge_by", "closed_by"]:
-            result[f"{key}_id"] = pop_nested_id(result, key)
-        result["assignees"] = object_array_to_id_array(result["assignees"])
-        result["reviewers"] = object_array_to_id_array(result["reviewers"])
 
         time_stats = result.pop("time_stats", {})
         for time_key in [
@@ -122,6 +395,69 @@ class ProjectMergeRequestsStream(ProjectBasedStream):
             "merge_request_iid": record["iid"],
         }
 
+    schema = th.PropertiesList(  # type: ignore
+        th.Property("id", th.IntegerType),
+        th.Property("iid", th.IntegerType),
+        th.Property("project_id", th.IntegerType),
+        th.Property("milestone_id", th.IntegerType),
+        th.Property("epic_id", th.IntegerType),
+        th.Property("author", user_object),
+        th.Property("assignees", th.ArrayType(user_object)),
+        th.Property("reviewers", th.ArrayType(user_object)),
+        # merged_by is deprecated
+        th.Property("merge_user", user_object),
+        th.Property("closed_by", user_object),
+        th.Property("title", th.StringType),
+        th.Property("description", th.StringType),
+        th.Property("state", th.StringType),
+        th.Property("labels", th.ArrayType(th.StringType)),
+        th.Property("created_at", th.DateTimeType),
+        th.Property("updated_at", th.DateTimeType),
+        th.Property("merged_at", th.DateTimeType),
+        th.Property("closed_at", th.DateTimeType),
+        th.Property("target_project_id", th.IntegerType),
+        th.Property("target_branch", th.StringType),
+        th.Property("source_project_id", th.IntegerType),
+        th.Property("source_branch", th.StringType),
+        th.Property("subscribed", th.BooleanType),
+        th.Property("draft", th.BooleanType),
+        th.Property("work_in_progress", th.BooleanType),
+        th.Property("merge_when_pipeline_succeeds", th.BooleanType),
+        th.Property("merge_status", th.StringType),
+        th.Property("has_conflicts", th.BooleanType),
+        th.Property("upvotes", th.IntegerType),
+        th.Property("downvotes", th.IntegerType),
+        th.Property("sha", th.StringType),
+        th.Property("squash", th.BooleanType),
+        th.Property("squash_commit_sha", th.StringType),
+        th.Property("user_notes_count", th.IntegerType),
+        th.Property("should_remove_source_branch", th.BooleanType),
+        th.Property("force_remove_source_branch", th.BooleanType),
+        th.Property("allow_collaboration", th.BooleanType),
+        th.Property("allow_maintainer_to_push", th.BooleanType),
+        th.Property("due_date", th.StringType),
+        th.Property("weight", th.IntegerType),
+        th.Property("web_url", th.StringType),
+        th.Property("confidential", th.BooleanType),
+        th.Property("discussion_locked", th.BooleanType),
+        th.Property("has_tasks", th.BooleanType),
+        th.Property("task_status", th.StringType),
+        th.Property("time_estimate", th.IntegerType),
+        th.Property("total_time_spent", th.IntegerType),
+        th.Property("human_time_estimate", th.StringType),
+        th.Property("human_total_time_spent", th.StringType),
+    ).to_dict()
+
+
+class MergeRequestNotesStream(NoteableStream):
+    """Gitlab Merge Request Notes (comments) Stream."""
+
+    # docs: https://docs.gitlab.com/ee/api/notes.html#list-all-merge-request-notes
+
+    name = "merge_request_notes"
+    parent_stream_type = ProjectMergeRequestsStream
+    path = "/projects/{project_path}/merge_requests/{merge_request_iid}/notes"
+
 
 class MergeRequestCommitsStream(ProjectBasedStream):
     """Gitlab Commits stream."""
@@ -130,6 +466,36 @@ class MergeRequestCommitsStream(ProjectBasedStream):
     path = "/projects/{project_id}/merge_requests/{merge_request_iid}/commits"
     primary_keys = ["project_id", "merge_request_iid", "commit_id"]
     parent_stream_type = ProjectMergeRequestsStream
+    replication_key = "created_at"
+    is_sorted = False
+    extra_url_params = {"with_stats": "true"}
+    schema_filepath = None  # to allow the use of schema below
+
+    schema = th.PropertiesList(  # type: ignore
+        th.Property("project_id", th.IntegerType),
+        th.Property("merge_request_iid", th.IntegerType),
+        th.Property("commit_id", th.StringType),
+        th.Property("commit_short_id", th.StringType),
+        th.Property("created_at", th.DateTimeType),
+        th.Property("parent_ids", th.ArrayType(th.StringType())),
+        th.Property("title", th.StringType),
+        th.Property("message", th.StringType),
+        th.Property("author_name", th.StringType),
+        th.Property("author_email", th.StringType),
+        th.Property("authored_date", th.DateTimeType),
+        th.Property("committer_name", th.StringType),
+        th.Property("committer_email", th.StringType),
+        th.Property("committed_date", th.DateTimeType),
+        th.Property("web_url", th.StringType),
+        th.Property(
+            "stats",
+            th.ObjectType(
+                th.Property("additions", th.IntegerType),
+                th.Property("deletions", th.IntegerType),
+                th.Property("total", th.IntegerType),
+            ),
+        ),
+    ).to_dict()
 
     def post_process(self, row: dict, context: Optional[dict] = None) -> Optional[dict]:
         """Post process records."""
@@ -155,8 +521,33 @@ class CommitsStream(ProjectBasedStream):
     replication_key = "created_at"
     is_sorted = False
     parent_stream_type = ProjectsStream
-
     extra_url_params = {"with_stats": "true"}
+    schema_filepath = None  # to allow the use of schema below
+
+    schema = th.PropertiesList(  # type: ignore
+        th.Property("project_id", th.IntegerType),
+        th.Property("id", th.StringType),
+        th.Property("short_id", th.StringType),
+        th.Property("created_at", th.DateTimeType),
+        th.Property("parent_ids", th.ArrayType(th.StringType())),
+        th.Property("title", th.StringType),
+        th.Property("message", th.StringType),
+        th.Property("author_name", th.StringType),
+        th.Property("author_email", th.StringType),
+        th.Property("authored_date", th.DateTimeType),
+        th.Property("committer_name", th.StringType),
+        th.Property("committer_email", th.StringType),
+        th.Property("committed_date", th.DateTimeType),
+        th.Property("web_url", th.StringType),
+        th.Property(
+            "stats",
+            th.ObjectType(
+                th.Property("additions", th.IntegerType),
+                th.Property("deletions", th.IntegerType),
+                th.Property("total", th.IntegerType),
+            ),
+        ),
+    ).to_dict()
 
 
 class BranchesStream(ProjectBasedStream):
@@ -251,6 +642,25 @@ class ProjectLabelsStream(ProjectBasedStream):
     path = "/projects/{project_id}/labels"
     primary_keys = ["project_id", "id"]
     parent_stream_type = ProjectsStream
+    schema_filepath = None
+    state_partitioning_keys = ["project_id"]
+    extra_url_params = {"per_page": 100}
+
+    schema = th.PropertiesList(  # type: ignore
+        th.Property("id", th.IntegerType),
+        th.Property("project_id", th.IntegerType),
+        th.Property("project_path", th.StringType),
+        th.Property("name", th.StringType),
+        th.Property("color", th.StringType),
+        th.Property("text_color", th.StringType),
+        th.Property("description", th.StringType),
+        th.Property("open_issues_count", th.IntegerType),
+        th.Property("closed_issues_count", th.IntegerType),
+        th.Property("open_merge_requests_count", th.IntegerType),
+        th.Property("subscribed", th.BooleanType),
+        th.Property("priority", th.IntegerType),
+        th.Property("is_project_label", th.BooleanType),
+    ).to_dict()
 
 
 class ProjectVulnerabilitiesStream(ProjectBasedStream):
@@ -278,14 +688,80 @@ class GroupsStream(GroupBasedStream):
     """Gitlab Groups stream."""
 
     name = "groups"
-    path = "/groups/{group_path}"
+    path = "/groups/{group_id}"
     primary_keys = ["id"]
+
+    def get_group_ids(self, group_list: List[str]) -> List[Dict[str, str]]:
+        """Enrich the list of groups with their numeric ID from gitlab.
+
+        This helps maintain a stable id for context and bookmarks.
+        It uses the gitlab api to fetch the numeric id matching the path.
+        It also removes non-existant repos and corrects casing to ensure
+        data is correct downstream.
+        """
+        # use a temp handmade stream to reuse all the graphql setup of the tap
+        class TempStream(GitlabGraphQLStream):
+            name = "tempStream"
+            schema_filepath = None  # to allow the use of schema below
+            schema = th.PropertiesList(
+                th.Property("id", th.StringType),
+            ).to_dict()
+
+            def __init__(self, tap, group_list) -> None:
+                super().__init__(tap)
+                self.group_list = group_list
+
+            @property
+            def query(self) -> str:
+                chunks = list()
+                for i, group in enumerate(self.group_list):
+                    chunks.append(
+                        f'grp{i}: group(fullPath: "{group}") ' "{ fullPath id }"
+                    )
+                return "query {" + " ".join(chunks) + "}"
+
+        groups_with_ids: list = list()
+        temp_stream = TempStream(self._tap, list(group_list))
+        # replace manually provided org/repo values by the ones obtained
+        # from gitlab api. This guarantees that case is correct in the output data.
+        # Also remove repos which do not exist to avoid crashing further down
+        # the line.
+        for record in temp_stream.request_records({}):
+            for item in record.keys():
+                if record[item] is None:
+                    # one of the repos returned `None`, which means it does
+                    # not exist, log some details, and move on to the next one
+                    group_full_name = group_list[int(item[3:])]
+                    self.logger.warning(
+                        (
+                            f"Group not found: {group_full_name} \t"
+                            "Removing it from list"
+                        )
+                    )
+                    continue
+                # group_id returned by graphql look like "gid://gitlab/Group/123456"
+                group_id = record[item]["id"].split("/")[-1]
+                groups_with_ids.append(
+                    {"group_path": record[item]["fullPath"], "group_id": group_id}
+                )
+        self.logger.info(f"Running the tap on {len(groups_with_ids)} repositories")
+        return groups_with_ids
+
+    @property
+    def partitions(self) -> List[Dict[str, str]]:
+        """Return a list of partition key dicts (if applicable), otherwise None."""
+        if "groups" not in self.config:
+            raise ValueError(
+                f"Missing `groups` setting which is required for the "
+                f"'{self.name}' stream."
+            )
+
+        return self.get_group_ids(self.config["groups"].split(" "))
 
     def get_child_context(self, record: dict, context: Optional[dict]) -> dict:
         """Perform post processing, including queuing up any child stream types."""
         assert context is not None  # Tell linter that context is non-null
         return {
-            "group_path": context["group_path"],
             "group_id": record["id"],
         }
 
@@ -294,7 +770,7 @@ class GroupProjectsStream(GroupBasedStream):
     """Gitlab Projects stream."""
 
     name = "group_projects"
-    path = "/groups/{group_path}/projects"
+    path = "/groups/{group_id}/projects"
     primary_keys = ["id"]
     parent_stream_type = GroupsStream
 
@@ -303,7 +779,7 @@ class GroupMilestonesStream(GroupBasedStream):
     """Gitlab Group Milestones stream."""
 
     name = "group_milestones"
-    path = "/groups/{group_path}/milestones"
+    path = "/groups/{group_id}/milestones"
     primary_keys = ["id"]
     schema_filename = "milestones.json"
     parent_stream_type = GroupsStream
@@ -313,7 +789,7 @@ class GroupMembersStream(GroupBasedStream):
     """Gitlab Group Members stream."""
 
     name = "group_members"
-    path = "/groups/{group_path}/members"
+    path = "/groups/{group_id}/members"
     primary_keys = ["group_id", "id"]
     parent_stream_type = GroupsStream
 
@@ -322,7 +798,7 @@ class GroupLabelsStream(GroupBasedStream):
     """Gitlab Group Labels stream."""
 
     name = "group_labels"
-    path = "/groups/{group_path}/labels"
+    path = "/groups/{group_id}/labels"
     primary_keys = ["group_id", "id"]
     parent_stream_type = GroupsStream
 
@@ -331,7 +807,7 @@ class GroupEpicsStream(GroupBasedStream):
     """Gitlab Epics stream."""
 
     name = "epics"
-    path = "/groups/{group_path}/epics"
+    path = "/groups/{group_id}/epics"
     primary_keys = ["id"]
     replication_key = "updated_at"
     bookmark_param_name = "updated_after"
@@ -371,7 +847,7 @@ class GroupVariablesStream(GroupBasedStream):
 
     name = "group_variables"
     path = "/groups/{group_id}/variables"
-    primary_keys = ["project_id", "key"]
+    primary_keys = ["group_id", "key"]
     parent_stream_type = GroupsStream
 
 

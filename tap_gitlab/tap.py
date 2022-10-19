@@ -1,15 +1,20 @@
 """GitLab tap class."""
 
 import inspect
-from typing import List
+from typing import Any, Dict, List
 
 from singer_sdk import Stream, Tap
 from singer_sdk import typing as th  # JSON schema typing helpers
 
 from tap_gitlab import streams
 from tap_gitlab.caching import setup_requests_cache
-from tap_gitlab.client import GroupBasedStream
-from tap_gitlab.streams import GitLabStream, ProjectBasedStream
+from tap_gitlab.client import (
+    GitlabGraphQLStream,
+    GitLabStream,
+    GroupBasedStream,
+    NoSinceProjectBasedStream,
+    ProjectBasedStream,
+)
 
 OPTIN_STREAM_NAMES = [
     "merge_request_commits",
@@ -155,7 +160,14 @@ class TapGitLab(Tap):
             if not issubclass(module_class, (GitLabStream)):
                 continue  # Not a stream class.
 
-            if module_class in [GitLabStream, ProjectBasedStream, GroupBasedStream]:
+            if module_class in [
+                GitLabStream,
+                GitlabGraphQLStream,
+                ProjectBasedStream,
+                GroupBasedStream,
+                NoSinceProjectBasedStream,
+                streams.NoteableStream,
+            ]:
                 continue  # Base classes, not streams.
 
             stream_name = module_class.name
@@ -183,3 +195,11 @@ class TapGitLab(Tap):
             stream_types.append(module_class)
 
         return [stream_class(tap=self) for stream_class in stream_types]
+
+    def load_state(self, state: Dict[str, Any]) -> None:
+        """Issue a warning about breaking changes in state management."""
+        self.logger.warning(
+            "If your state file was created by tap-gitlab <= 1.2.0, it will be ignored."
+            "See changelog for details."
+        )
+        super().load_state(state)

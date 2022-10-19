@@ -6,17 +6,20 @@ import copy
 import urllib
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union, cast
-from urllib.parse import urlparse
+from typing import Any, Dict, Iterable, List, Optional, Union, cast
+from urllib.parse import parse_qs, urlparse
 
 import requests
+from dateutil.parser import parse
 from singer_sdk.authenticators import APIKeyAuthenticator
-from singer_sdk.streams import RESTStream
+from singer_sdk.helpers.jsonpath import extract_jsonpath
+from singer_sdk.streams import GraphQLStream, RESTStream
 
 API_TOKEN_KEY = "Private-Token"
 API_TOKEN_SETTING_NAME = "private_token"
 
-DEFAULT_API_URL = "https://gitlab.com/api/v4"
+DEFAULT_REST_API_URL = "https://gitlab.com/api/v4"
+DEFAULT_GRAPHQL_API_URL = "https://gitlab.com/api"
 
 SCHEMAS_DIR = Path(__file__).parent / Path("./schemas")
 
@@ -43,7 +46,7 @@ class GitLabStream(RESTStream):
         'https://gitlab.com/api/v4' is equivalent to 'https://gitlab.com/api/v4/'.
         """
         # Remove trailing '/' from url base.
-        result = self.config.get("api_url", DEFAULT_API_URL).rstrip("/")
+        result = self.config.get("api_url", DEFAULT_REST_API_URL).rstrip("/")
 
         # If path part is not provided, append the v4 endpoint as default:
         # For example 'https://gitlab.com' => 'https://gitlab.com/api/v4'
@@ -57,7 +60,7 @@ class GitLabStream(RESTStream):
         return f"{self.name}.json"
 
     @property
-    def schema_filepath(self) -> Path:
+    def schema_filepath(self) -> Optional[Path]:
         """Return the filepath for the stream's schema."""
         return SCHEMAS_DIR / self.schema_filename
 
@@ -144,18 +147,58 @@ class GitLabStream(RESTStream):
 class ProjectBasedStream(GitLabStream):
     """Base class for streams that are keys based on project ID."""
 
-    state_partitioning_keys = ["project_path"]
+    state_partitioning_keys = ["project_id"]
+
+
+class NoSinceProjectBasedStream(ProjectBasedStream):
+    """Base class for streams lacking a "since" query parameter.
+
+    It includes logic to emulate a "since" query parameter, for
+    instance for notes streams (eg. issue notes, MR notes...).
+    """
+
+    def get_next_page_token(
+        self, response: requests.Response, previous_token: Optional[Any]
+    ) -> Optional[Any]:
+        """Emulate a "since" parameter for streams that do not support it.
+
+        Return a token for identifying next page or None if no more pages.
+        """
+        # extract the cutoff time from request parameters
+        request_parameters = parse_qs(str(urlparse(response.request.url).query))
+        # parse_qs interprets "+" as a space, revert this to keep an aware datetime
+        try:
+            cutoff = (
+                request_parameters[self.bookmark_param_name][0].replace(" ", "+")
+                if self.bookmark_param_name in request_parameters
+                else None
+            )
+        except IndexError:
+            cutoff = None
+
+        if cutoff is not None:
+            # get result items from response
+            resp_json = response.json()
+            results = resp_json
+            if len(results) == 0:
+                # gitlab API sometimes returns empty lists, no need to paginate further
+                return None
+            # if we receive items past the cutoff timestamp, we can stop paginating
+            if parse(results[-1][self.replication_key]) < parse(cutoff):
+                return None
+
+        return super().get_next_page_token(response, previous_token)
 
 
 class GroupBasedStream(GitLabStream):
     """Base class for streams that are keys based on group ID."""
 
-    state_partitioning_keys = ["group_path"]
+    state_partitioning_keys = ["group_id"]
 
     @property
     def partitions(self) -> List[dict]:
         """Return a list of partition key dicts (if applicable), otherwise None."""
-        if "{group_path}" in self.path:
+        if "{group_id}" in self.path:
             if "groups" not in self.config:
                 raise ValueError(
                     f"Missing `groups` setting which is required for the "
@@ -163,12 +206,33 @@ class GroupBasedStream(GitLabStream):
                 )
 
             return [
-                {"group_path": id}
-                for id in cast(list, self.config["groups"].split(" "))
+                {"group_id": id} for id in cast(list, self.config["groups"].split(" "))
             ]
 
         raise ValueError(
             "Could not detect partition type for Gitlab stream "
             f"'{self.name}' ({self.path}). "
-            "Expected a URL path containing '{project_path}' or '{group_path}'. "
+            "Expected a URL path containing '{project_path}' or '{group_id}'. "
         )
+
+
+class GitlabGraphQLStream(GraphQLStream, GitLabStream):
+    """Base class for graphql streams."""
+
+    @property
+    def url_base(self) -> str:
+        """Return the base url for graphql streams."""
+        base_url = self.config.get("graphql_api_url_base", DEFAULT_GRAPHQL_API_URL)
+        return f"{base_url}/graphql"
+
+    # the jsonpath under which to fetch the list of records from the graphql response
+    records_jsonpath: str = "$.data.[*]"  # type: ignore
+
+    def parse_response(self, response: requests.Response) -> Iterable[dict]:
+        """Parse the response and return an iterator of result rows.
+
+        .. _requests.Response:
+            https://docs.python-requests.org/en/latest/api/#requests.Response
+        """
+        resp_json = response.json()
+        yield from extract_jsonpath(self.records_jsonpath, input=resp_json)

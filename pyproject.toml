@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "tap-gitlab"
-version = "2.0.0-alpha3"
+version = "2.0.0"
 description = "`tap-gitlab` is a Singer tap for GitLab, built with the Meltano SDK for Singer Taps."
 authors = ["Meltano and Meltano Community"]
 keywords = [
@@ -12,19 +12,20 @@ license = "Apache 2.0"
 [tool.poetry.dependencies]
 python = "<3.11,>=3.7.1"
 requests = "^2.25.1"
-singer-sdk = "^0.4.4"
+singer-sdk = "^0.12.0"
 requests-cache = "^0.9.3"
 PyYAML = "^6.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.5"
 tox = "^3.24.4"
-flake8 = "^3.9.2"
-black = "^22.3.0"
+flake8 = "^5.0.4"
+black = "^22.10.0"
 pydocstyle = "^6.1.1"
-mypy = "^0.910"
-types-requests = "^2.26.1"
+mypy = "^0.981"
+types-requests = "^2.27.1"
 isort = "^5.10.1"
+types-python-dateutil = "^2.8.10"
 python-dotenv = "^0.20.0"
 
 [tool.isort]
