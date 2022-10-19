@@ -197,9 +197,7 @@ class TapGitLab(Tap):
         return [stream_class(tap=self) for stream_class in stream_types]
 
     def load_state(self, state: Dict[str, Any]) -> None:
-        """
-        Issue a warning about breaking changes in state management.
-        """
+        """Issue a warning about breaking changes in state management."""
         self.logger.warning(
             "If your state file was created by tap-gitlab <= 1.2.0, it will be ignored."
             "See changelog for details."
