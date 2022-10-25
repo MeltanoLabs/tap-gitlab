@@ -7,6 +7,12 @@
         "integer"
       ]
     },
+    "title": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
     "author_id": {
       "type": [
         "null",
@@ -302,12 +308,6 @@
         ]
       },
       "state": {
-        "type": [
-          "null",
-          "string"
-        ]
-      },
-      "title": {
         "type": [
           "null",
           "string"
