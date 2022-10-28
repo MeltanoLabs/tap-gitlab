@@ -10,9 +10,9 @@ keywords = [
 license = "Apache 2.0"
 
 [tool.poetry.dependencies]
-python = "<3.11,>=3.7.1"
+python = "<3.12,>=3.7.1"
 requests = "^2.25.1"
-singer-sdk = "^0.12.0"
+singer-sdk = {git = "https://github.com/meltano/sdk.git", rev = "6d923fb4506d46c9e2c9805a489032828a277f9e"}
 requests-cache = "^0.9.3"
 PyYAML = "^6.0"
 
