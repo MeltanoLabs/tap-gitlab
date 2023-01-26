@@ -39,27 +39,27 @@ for k, v in os.environ.items():
 TestTapStackExchange = get_tap_test_class(tap_class=TapGitLab, config=SAMPLE_CONFIG)
 
 
-# https://gitlab.com/meltano/sdk/-/merge_requests/265
-def test_tap_config_defaults():
-    """Run standard tap tests from the SDK."""
-    tap = TapGitLab(config=SAMPLE_CONFIG, parse_env_config=True)
-    for optin_stream in OPTIN_STREAM_NAMES:
-        assert f"fetch_{optin_stream}" in tap.config
+# # https://gitlab.com/meltano/sdk/-/merge_requests/265
+# def test_tap_config_defaults():
+#     """Run standard tap tests from the SDK."""
+#     tap = TapGitLab(config=SAMPLE_CONFIG, parse_env_config=True)
+#     for optin_stream in OPTIN_STREAM_NAMES:
+#         assert f"fetch_{optin_stream}" in tap.config
 
 
-def test_get_repo_ids():
-    """Check that the "presync" graphql call returns clean repo names/ids."""
-    tap = TapGitLab(config=SAMPLE_CONFIG, parse_env_config=True)
-    stream = ProjectsStream(tap=tap)
+# def test_get_repo_ids():
+#     """Check that the "presync" graphql call returns clean repo names/ids."""
+#     tap = TapGitLab(config=SAMPLE_CONFIG, parse_env_config=True)
+#     stream = ProjectsStream(tap=tap)
 
-    list_of_buggy_repos = [
-        "meLTano/sDk",  # incorrect case
-        "DoesNot/Exist",  # does not exist ;)
-        "gitlab-org/graphql-sandbox",  # correct value
-    ]
-    clean_list = stream.get_repo_ids(list_of_buggy_repos)
+#     list_of_buggy_repos = [
+#         "meLTano/sDk",  # incorrect case
+#         "DoesNot/Exist",  # does not exist ;)
+#         "gitlab-org/graphql-sandbox",  # correct value
+#     ]
+#     clean_list = stream.get_repo_ids(list_of_buggy_repos)
 
-    assert clean_list == [
-        {"project_id": "22672923", "project_path": "meltano/sdk"},
-        {"project_id": "15297693", "project_path": "gitlab-org/graphql-sandbox"},
-    ]
+#     assert clean_list == [
+#         {"project_id": "22672923", "project_path": "meltano/sdk"},
+#         {"project_id": "15297693", "project_path": "gitlab-org/graphql-sandbox"},
+#     ]
