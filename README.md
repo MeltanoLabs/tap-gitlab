@@ -25,6 +25,7 @@ Built with the [Meltano SDK](https://sdk.meltano.com) for Singer Taps and Target
 | Setting                    | Required | Default | Description |
 |:---------------------------|:--------:|:-------:|:------------|
 | api_url                    | False    | None    | Optionally overrides the default base URL for the Gitlab API. If no path is provided, the base URL will be appended with `/api/v4`. E.g. 'https://gitlab.com' becomes 'https://gitlab.com/api/v4'. |
+| graphql_api_url_base       | False    | None    | Optionally overrides the default base URL for the Gitlab Graphql API. Example. 'https://gitlab.com/api'. |
 | private_token              | True     | None    | An access token to use when calling to the Gitlab API. |
 | groups                     | False    | None    | A space delimited list of group ids, e.g. 'orgname1 orgname2 orgname3' |
 | projects                   | False    | None    | A space delimited list of project ids, e.g. 'orgname/projectname1 orgname/projectname2 |
@@ -50,6 +51,7 @@ A full list of supported settings and capabilities is available by running: `tap
 ```js
 {
   "api_url": "https://gitlab.com/api/v4",   // optionally overrides the base URL
+  "graphql_api_url_base": "https://gitlab.com/api",
   "private_token": "your-access-token",
   "groups": "myorg mygroup",
   "projects": "myorg/repo-a myorg/repo-b",
@@ -219,5 +221,5 @@ meltano elt tap-gitlab target-jsonl
 
 ### SDK Dev Guide
 
-See the [dev guide](https://sdk.meltano.com/en/latest/dev_guide.html) for more instructions on how to use the SDK to 
+See the [dev guide](https://sdk.meltano.com/en/latest/dev_guide.html) for more instructions on how to use the SDK to
 develop your own taps and targets.
