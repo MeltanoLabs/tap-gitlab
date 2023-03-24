@@ -191,6 +191,7 @@ class ProjectsStream(ProjectBasedStream):
         th.Property("snippets_enabled", th.BooleanType),
         th.Property("wiki_enabled", th.BooleanType),
         th.Property("license_url", th.StringType),
+        th.Property("ci_config_path", th.StringType),
         th.Property(
             "license",
             th.ObjectType(
