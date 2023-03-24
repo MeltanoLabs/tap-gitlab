@@ -13,6 +13,9 @@
         "builds_enabled": {
             "type": ["null", "boolean"]
         },
+        "ci_config_path": {
+            "type": ["null", "string"]
+        },
         "container_registry_enabled": {
             "type": ["null", "boolean"]
         },
