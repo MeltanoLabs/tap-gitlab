@@ -248,11 +248,11 @@ def get_start(entity):
         STATE[entity] = CONFIG['start_date']
     return STATE[entity]
 
-
+@backoff.on_predicate(backoff.runtime,  predicate=lambda r: r.status_code == 429, vale=lambda r: int(r.headers.get("Retry-After")), jitter=None)
 @backoff.on_exception(backoff.expo,
                       (requests.exceptions.RequestException),
                       max_tries=5,
-                      giveup=lambda e: e.response is not None and 400 <= e.response.status_code < 500, # pylint: disable=line-too-long
+                      giveup=lambda e: e.response is not None and e.response.status_code != 429 and 400 <= e.response.status_code < 500, # pylint: disable=line-too-long
                       factor=2)
 def request(url, params=None):
     params = params or {}
