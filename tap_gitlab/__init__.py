@@ -248,7 +248,11 @@ def get_start(entity):
         STATE[entity] = CONFIG['start_date']
     return STATE[entity]
 
-@backoff.on_predicate(backoff.runtime,  predicate=lambda r: r.status_code == 429, vale=lambda r: int(r.headers.get("Retry-After")), jitter=None)
+@backoff.on_predicate(backoff.runtime,
+                      predicate=lambda r: r.status_code == 429,
+                      max_tries = 5, 
+                      vale=lambda r: int(r.headers.get("Retry-After")), 
+                      jitter=None)
 @backoff.on_exception(backoff.expo,
                       (requests.exceptions.RequestException),
                       max_tries=5,
