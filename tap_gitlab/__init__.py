@@ -250,7 +250,7 @@ def get_start(entity):
 
 @backoff.on_predicate(backoff.runtime,
                       predicate=lambda r: r.status_code == 429,
-                      max_tries = 5, 
+                      max_tries=5, 
                       value=lambda r: int(r.headers.get("Retry-After")), 
                       jitter=None)
 @backoff.on_exception(backoff.expo,
