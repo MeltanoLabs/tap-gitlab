@@ -13,7 +13,7 @@ setup(name='tap-gitlab',
           'singer-python==5.9.1',
           'requests==2.32.0',
           'strict-rfc3339==0.7',
-          'backoff==1.8.0'
+          'backoff==2.2.1',
       ],
       entry_points='''
           [console_scripts]
