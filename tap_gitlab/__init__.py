@@ -12,8 +12,15 @@ from singer.schema import Schema
 
 import pytz
 import backoff
-from strict_rfc3339 import rfc3339_to_timestamp
 from dateutil.parser import isoparse
+
+# Patch datetime.fromisoformat for Python < 3.11
+try:
+    if sys.version_info < (3, 11):
+        from backports.datetime_fromisoformat import MonkeyPatch
+        MonkeyPatch.patch_fromisoformat()
+except ImportError:
+    pass
 
 PER_PAGE_MAX = 100
 CONFIG = {
@@ -322,9 +329,13 @@ def gen_request(url):
 def format_timestamp(data, typ, schema):
     result = data
     if data and typ == 'string' and schema.get('format') == 'date-time':
-        rfc3339_ts = rfc3339_to_timestamp(data)
-        utc_dt = datetime.datetime.utcfromtimestamp(rfc3339_ts).replace(tzinfo=pytz.UTC)
-        result = utils.strftime(utc_dt)
+        # Use datetime.fromisoformat for ISO 8601 parsing
+        dt = datetime.datetime.fromisoformat(data)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=pytz.UTC)
+        else:
+            dt = dt.astimezone(pytz.UTC)
+        result = utils.strftime(dt)
 
     return result
 
