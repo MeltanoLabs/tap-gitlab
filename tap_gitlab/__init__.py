@@ -12,8 +12,15 @@ from singer.schema import Schema
 
 import pytz
 import backoff
-from strict_rfc3339 import rfc3339_to_timestamp
 from dateutil.parser import isoparse
+
+# Patch datetime.fromisoformat for Python < 3.11
+try:
+    if sys.version_info < (3, 11):
+        from backports.datetime_fromisoformat import MonkeyPatch
+        MonkeyPatch.patch_fromisoformat()
+except ImportError:
+    pass
 
 PER_PAGE_MAX = 100
 CONFIG = {
@@ -24,6 +31,7 @@ CONFIG = {
     'ultimate_license': False,
     'fetch_merge_request_commits': False,
     'fetch_pipelines_extended': False,
+    'fetch_retried_jobs': False,
     'fetch_group_variables': False,
     'fetch_project_variables': False,
 }
@@ -71,7 +79,7 @@ RESOURCES = {
         'replication_keys': ['updated_at'],
     },
     'jobs': {
-        'url': '/projects/{id}/pipelines/{secondary_id}/jobs',
+        'url': '/projects/{id}/pipelines/{secondary_id}/jobs?include_retried={fetch_retried_jobs}',
         'schema': load_schema('jobs'),
         'key_properties': ['id'],
         'replication_method': 'FULL_TABLE',
@@ -229,7 +237,7 @@ class ResourceInaccessible(Exception):
 def truthy(val) -> bool:
     return str(val).lower() in TRUTHY
 
-def get_url(entity, id, secondary_id=None, start_date=None):
+def get_url(entity, id, secondary_id=None, start_date=None, fetch_retried_jobs=False):
     if not isinstance(id, int):
         id = id.replace("/", "%2F")
 
@@ -239,7 +247,8 @@ def get_url(entity, id, secondary_id=None, start_date=None):
     return CONFIG['api_url'] + RESOURCES[entity]['url'].format(
             id=id,
             secondary_id=secondary_id,
-            start_date=start_date
+            start_date=start_date,
+            fetch_retried_jobs=fetch_retried_jobs,
         )
 
 
@@ -248,11 +257,15 @@ def get_start(entity):
         STATE[entity] = CONFIG['start_date']
     return STATE[entity]
 
-
+@backoff.on_predicate(backoff.runtime,
+                      predicate=lambda r: r.status_code == 429,
+                      max_tries=5,
+                      value=lambda r: int(r.headers.get("Retry-After")),
+                      jitter=None)
 @backoff.on_exception(backoff.expo,
                       (requests.exceptions.RequestException),
                       max_tries=5,
-                      giveup=lambda e: e.response is not None and 400 <= e.response.status_code < 500, # pylint: disable=line-too-long
+                      giveup=lambda e: e.response is not None and e.response.status_code != 429 and 400 <= e.response.status_code < 500, # pylint: disable=line-too-long
                       factor=2)
 def request(url, params=None):
     params = params or {}
@@ -316,9 +329,13 @@ def gen_request(url):
 def format_timestamp(data, typ, schema):
     result = data
     if data and typ == 'string' and schema.get('format') == 'date-time':
-        rfc3339_ts = rfc3339_to_timestamp(data)
-        utc_dt = datetime.datetime.utcfromtimestamp(rfc3339_ts).replace(tzinfo=pytz.UTC)
-        result = utils.strftime(utc_dt)
+        # Use datetime.fromisoformat for ISO 8601 parsing
+        dt = datetime.datetime.fromisoformat(data)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=pytz.UTC)
+        else:
+            dt = dt.astimezone(pytz.UTC)
+        result = utils.strftime(dt)
 
     return result
 
@@ -772,8 +789,9 @@ def sync_jobs(project, pipeline):
     if stream is None or not stream.is_selected():
         return
     mdata = metadata.to_map(stream.metadata)
+    fetch_retried_jobs = CONFIG['fetch_retried_jobs']
 
-    url = get_url(entity=entity, id=project['id'], secondary_id=pipeline['id'])
+    url = get_url(entity=entity, id=project['id'], secondary_id=pipeline['id'], fetch_retried_jobs=fetch_retried_jobs)
     with Transformer(pre_hook=format_timestamp) as transformer:
         for row in gen_request(url):
             row['project_id'] = project['id']
@@ -934,6 +952,7 @@ def main_impl():
     CONFIG['ultimate_license'] = truthy(CONFIG['ultimate_license'])
     CONFIG['fetch_merge_request_commits'] = truthy(CONFIG['fetch_merge_request_commits'])
     CONFIG['fetch_pipelines_extended'] = truthy(CONFIG['fetch_pipelines_extended'])
+    CONFIG['fetch_retried_jobs'] = truthy(CONFIG['fetch_retried_jobs'])
     CONFIG['fetch_group_variables'] = truthy(CONFIG['fetch_group_variables'])
     CONFIG['fetch_project_variables'] = truthy(CONFIG['fetch_project_variables'])
 
