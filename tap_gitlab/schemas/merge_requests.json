@@ -16,6 +16,9 @@
         "author_id": {
             "type": ["null", "integer"]
         },
+        "author_username": {
+            "type": ["null", "string"]
+        },
         "assignee_id": {
             "type": ["null", "integer"]
         },
