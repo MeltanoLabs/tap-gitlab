@@ -82,6 +82,24 @@
                 }
             ]
         },
+        "iteration_id": {
+            "type": ["null", "integer"]
+        },
+        "iteration_title": {
+            "type": ["null", "string"]
+        },
+        "iteration_description": {
+            "type": ["null", "string"]
+        },
+        "iteration_state": {
+            "type": ["null", "string"]
+        },
+        "iteration_start_date": {
+            "type": ["null", "string"]
+        },
+        "iteration_due_date": {
+            "type": ["null", "string"]
+        },
         "subscribed": {
             "type": ["null", "boolean"]
         },

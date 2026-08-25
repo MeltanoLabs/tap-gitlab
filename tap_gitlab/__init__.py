@@ -424,6 +424,23 @@ def sync_issues(project):
                 row["human_time_estimate"] = None
                 row["human_total_time_spent"] = None
 
+            # Get the iteration details (only set on GitLab Premium or Ultimate)
+            iteration = row.get("iteration")
+            if iteration:
+                row["iteration_id"] = iteration.get("id")
+                row["iteration_title"] = iteration.get("title")
+                row["iteration_description"] = iteration.get("description")
+                row["iteration_state"] = iteration.get("state")
+                row["iteration_start_date"] = iteration.get("start_date")
+                row["iteration_due_date"] = iteration.get("due_date")
+            else:
+                row["iteration_id"] = None
+                row["iteration_title"] = None
+                row["iteration_description"] = None
+                row["iteration_state"] = None
+                row["iteration_start_date"] = None
+                row["iteration_due_date"] = None
+
             transformed_row = transformer.transform(row, RESOURCES[entity]["schema"], mdata)
 
             singer.write_record(entity, transformed_row, time_extracted=utils.now())
