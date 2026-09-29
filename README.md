@@ -81,7 +81,8 @@ pip install git+https://gitlab.com/meltano/tap-gitlab.git
       "fetch_pipelines_extended": false,
       "fetch_retried_jobs": false,
       "fetch_group_variables": false,
-      "fetch_project_variables": false
+      "fetch_project_variables": false,
+      "fetch_bridges": false
     }
     ```
 
@@ -98,6 +99,8 @@ pip install git+https://gitlab.com/meltano/tap-gitlab.git
     If `fetch_group_variables` is true (defaults to false), then Group-level CI/CD variables will be retrieved for each available / specified group. This feature is treated as an opt-in to prevent users from accidentally extracting any potential secrets stored as Group-level CI/CD variables.
 
     If `fetch_project_variables` is true (defaults to false), then Project-level CI/CD variables will be retrieved for each available / specified project. This feature is treated as an opt-in to prevent users from accidentally extracting any potential secrets stored as Project-level CI/CD variables.
+
+    If `fetch_bridges` is true (defaults to false), then Pipelines triggered from other pipelines will be retrieved.
 
 4. [Optional] Create the initial state file
 
