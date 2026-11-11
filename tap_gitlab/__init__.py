@@ -341,7 +341,13 @@ def format_timestamp(data, typ, schema):
 
 def flatten_id(item, target):
     if target in item and item[target] is not None:
-        item[target + '_id'] = item.pop(target, {}).pop('id', None)
+        value = item.pop(target)
+        if isinstance(value, dict):
+            item[target + '_id'] = value.pop('id', None)
+        else:
+            # Unexpected scalar value (e.g. an id instead of an object):
+            # keep it instead of crashing with AttributeError.
+            item[target + '_id'] = value
     else:
         item[target + '_id'] = None
 
